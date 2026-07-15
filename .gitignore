@@ -1,0 +1,18 @@
+# Symfony
+/backend/.env.local
+/backend/.env.local.php
+/backend/.env.*.local
+/backend/var/
+/backend/vendor/
+/backend/public/bundles/
+
+# React / Vite
+/frontend/node_modules/
+/frontend/dist/
+/backend/public/assets/
+
+# Прочее
+.DS_Store
+*.log
+.idea/*
+!.idea/

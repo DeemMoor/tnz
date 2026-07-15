@@ -1,0 +1,948 @@
+/* ==========================================================================
+   Общий макет и компоненты. Mobile-first; десктоп расширяется в @media внизу.
+   ========================================================================== */
+
+/* --- Шапка --- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+}
+
+.nav {
+  display: flex;
+  gap: 6px;
+}
+
+.nav a {
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.nav a:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.nav a.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* «Выйти» в шапке — неприметная, чтобы не жалась к навигации и не путалась. */
+.nav-logout {
+  min-height: auto;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.92rem;
+  border-radius: 8px;
+}
+
+.nav-logout:hover {
+  background: var(--bg);
+  color: var(--danger);
+}
+
+/* --- Контейнер страницы --- */
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+/* --- Карточка --- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* --- Кнопки --- */
+button,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 11px 18px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+button:hover,
+.btn:hover {
+  background: var(--accent-dark);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn-lg {
+  min-height: 52px;
+  padding: 14px 24px;
+  font-size: 1.05rem;
+}
+
+.btn-outline,
+button.secondary {
+  background: #fff;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.btn-outline:hover,
+button.secondary:hover {
+  background: var(--accent-soft);
+}
+
+button.danger {
+  background: var(--danger);
+}
+
+button.danger:hover {
+  background: #97281c;
+}
+
+button.small {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+
+/* Ссылка, выглядящая как второстепенное действие. */
+.btn-link {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* --- Формы --- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.form input {
+  padding: 12px 14px;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-height: 48px;
+  background: #fff;
+  color: var(--text);
+}
+
+.form input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.field-error,
+.form-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.form-error {
+  font-weight: 600;
+  margin: 8px 0;
+}
+
+.form-note {
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+  color: var(--text) !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
+}
+
+.rttf {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.email-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ping-ok {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.ping-bad {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* --- Баннеры --- */
+.banner {
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.banner-ok {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.banner-bad {
+  background: rgba(192, 57, 43, 0.1);
+  color: var(--danger);
+}
+
+/* ==========================================================================
+   Главная (hero + фичи)
+   ========================================================================== */
+.hero {
+  text-align: center;
+  padding: 24px 0 8px;
+}
+
+.hero h1 {
+  font-size: 1.9rem;
+  line-height: 1.15;
+}
+
+.hero-sub {
+  color: var(--muted);
+  max-width: 520px;
+  margin: 0 auto 24px;
+}
+
+.hero-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.hero-auth {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* Блок ближайшего турнира на главной — ключевое действие. */
+.hero-tournament {
+  max-width: 440px;
+  margin: 24px auto 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.ht-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ht-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.ht-date {
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-transform: capitalize;
+}
+
+.ht-counts {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.hero-tournament .btn-lg,
+.hero-tournament button {
+  width: 100%;
+}
+
+.hero-tournament .badge {
+  align-self: center;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.feature {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.feature-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.feature-text {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/* ==========================================================================
+   Турниры
+   ========================================================================== */
+.tournaments-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.card-head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.card .date {
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-transform: capitalize;
+}
+
+.status-pill {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.status-registration {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.status-checkin {
+  background: rgba(200, 140, 0, 0.14);
+  color: #a86a00;
+}
+
+.status-drawn,
+.status-in_progress {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.status-finished {
+  background: #eceef1;
+  color: #4b5563;
+}
+
+.counts {
+  font-size: 0.92rem;
+  margin-bottom: 10px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: fit-content;
+  margin-bottom: 10px;
+}
+
+.badge-ok {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge-wait {
+  background: rgba(200, 140, 0, 0.14);
+  color: #a86a00;
+}
+
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.card-actions .btn,
+.card-actions button {
+  width: 100%;
+}
+
+.card-actions .btn-link {
+  width: auto;
+}
+
+/* ==========================================================================
+   Экран чекина
+   ========================================================================== */
+.walkin {
+  margin: 16px 0;
+  gap: 12px;
+}
+
+.draw-done {
+  text-align: center;
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.roster {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 20px;
+}
+
+ol.roster {
+  counter-reset: r;
+}
+
+.roster li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.roster li.checked {
+  opacity: 0.65;
+}
+
+.roster .rname {
+  flex: 1;
+  font-weight: 600;
+}
+
+.roster .rphone {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ok-check {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.stage-action {
+  margin-top: 8px;
+}
+
+.stage-action .btn-lg {
+  width: 100%;
+}
+
+/* ==========================================================================
+   Турнирная сетка
+   ========================================================================== */
+.bracket-page {
+  max-width: 1120px;
+}
+
+.table-bracket {
+  margin-bottom: 28px;
+}
+
+/* Настоящая турнирная сетка: фиксированная высота матча (--mh), шаг слота
+   (--slot) удваивается каждый тур, соединительные линии рисуются псевдо-
+   элементами. --line — цвет линий, --colgap — расстояние между турами. */
+.rounds {
+  --mh: 66px;
+  --colgap: 30px;
+  --line: #c7cdd6;
+  display: flex;
+  gap: var(--colgap);
+  overflow-x: auto;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.round-col {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 190px;
+  width: 190px;
+}
+
+.round-matches {
+  display: flex;
+  flex-direction: column;
+}
+
+.round-label {
+  font-size: 0.74rem;
+  color: var(--muted);
+  text-align: center;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+}
+
+.match {
+  position: relative;
+  box-sizing: border-box;
+  height: var(--mh);
+  /* Центрируем матч в его слоте — отсюда точное выравнивание туров. */
+  margin: calc((var(--slot) - var(--mh)) / 2) 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.prow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0 12px;
+  font-size: 0.9rem;
+  background: #fff;
+  border: none;
+  border-radius: 0;
+  height: calc((var(--mh) - 3px) / 2);
+  line-height: calc((var(--mh) - 3px) / 2);
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.match .prow + .prow {
+  border-top: 1px solid var(--border);
+}
+
+/* --- Соединительные линии (двусторонняя сетка) --- */
+
+/* ЛЕВОЕ крыло: «вилка» справа от матчей-кормильцев, к центру. */
+.side-left .match::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  width: calc(var(--colgap) / 2);
+  height: calc(var(--slot) / 2);
+  box-sizing: border-box;
+}
+.side-left .round-matches .match:nth-child(odd)::after {
+  top: 50%;
+  border-top: 2px solid var(--line);
+  border-right: 2px solid var(--line);
+}
+.side-left .round-matches .match:nth-child(even)::after {
+  bottom: 50%;
+  border-bottom: 2px solid var(--line);
+  border-right: 2px solid var(--line);
+}
+/* Полуфинал слева → финал: одиночная горизонталь (пары нет). */
+.side-left.pre-final .round-matches .match:nth-child(odd)::after,
+.side-left.pre-final .round-matches .match:nth-child(even)::after {
+  top: 50%;
+  bottom: auto;
+  height: 2px;
+  border: none;
+  background: var(--line);
+}
+/* Входящая горизонталь слева (кроме крайней колонки). */
+.side-left:not(.first-col) .match::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  width: calc(var(--colgap) / 2);
+  height: 2px;
+  background: var(--line);
+}
+
+/* ПРАВОЕ крыло — зеркало: «вилка» слева, к центру. */
+.side-right .match::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  width: calc(var(--colgap) / 2);
+  height: calc(var(--slot) / 2);
+  box-sizing: border-box;
+}
+.side-right .round-matches .match:nth-child(odd)::before {
+  top: 50%;
+  border-top: 2px solid var(--line);
+  border-left: 2px solid var(--line);
+}
+.side-right .round-matches .match:nth-child(even)::before {
+  bottom: 50%;
+  border-bottom: 2px solid var(--line);
+  border-left: 2px solid var(--line);
+}
+.side-right.pre-final .round-matches .match:nth-child(odd)::before,
+.side-right.pre-final .round-matches .match:nth-child(even)::before {
+  top: 50%;
+  bottom: auto;
+  height: 2px;
+  border: none;
+  background: var(--line);
+}
+.side-right:not(.first-col) .match::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  width: calc(var(--colgap) / 2);
+  height: 2px;
+  background: var(--line);
+}
+
+/* ЦЕНТР (финал): короткие горизонтали с обеих сторон. */
+.side-center .match::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  width: calc(var(--colgap) / 2);
+  height: 2px;
+  background: var(--line);
+}
+.side-center .match::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  width: calc(var(--colgap) / 2);
+  height: 2px;
+  background: var(--line);
+}
+
+.prow.won {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.prow.pickable {
+  cursor: pointer;
+}
+
+.prow.pickable:hover {
+  background: var(--accent-soft);
+}
+
+/* ==========================================================================
+   Статистика
+   ========================================================================== */
+.stats {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 0.95rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.stats th,
+.stats td {
+  padding: 12px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.stats tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stats th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--bg);
+}
+
+.stats .pname {
+  text-align: left;
+  font-weight: 600;
+}
+
+.stats .rank {
+  color: var(--muted);
+  width: 32px;
+}
+
+.stats .pts {
+  font-weight: 800;
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   Личный кабинет
+   ========================================================================== */
+.profile-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.profile-settings h2,
+.history h2 {
+  margin-top: 0;
+}
+
+.logout {
+  margin-top: 20px;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-list li {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--card);
+}
+
+.h-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.h-title {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.h-title:hover {
+  color: var(--accent);
+}
+
+.h-date {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.h-body {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.h-stage {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.h-score {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   Десктоп: шире контейнер, богаче раскладка
+   ========================================================================== */
+@media (min-width: 768px) {
+  .page {
+    max-width: 980px;
+    padding: 32px 24px 64px;
+  }
+
+  h1 {
+    font-size: 1.9rem;
+  }
+
+  .hero {
+    padding: 48px 0 16px;
+  }
+
+  .hero h1 {
+    font-size: 2.6rem;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+  }
+
+  .hero-actions {
+    flex-direction: row;
+    justify-content: center;
+    max-width: none;
+  }
+
+  .features {
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 48px;
+  }
+
+  /* Список турниров — плитками. */
+  .tournaments-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Кабинет — две колонки: настройки | история. */
+  .profile-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  /* Кнопки действий в карточке турнира не тянем на всю ширину. */
+  .card-actions .btn,
+  .card-actions button {
+    width: auto;
+  }
+
+  .stage-action .btn-lg,
+  .draw-done .btn-lg {
+    width: auto;
+  }
+
+  /* Сетка на десктопе — во всю ширину, целиком, без горизонтального скролла.
+     Колонки делят доступную ширину поровну; вертикальные связи от ширины
+     не зависят (считаются по --slot). */
+  .page.bracket-page {
+    max-width: min(1440px, 96vw);
+  }
+
+  .bracket-page .rounds {
+    overflow-x: visible;
+  }
+
+  .bracket-page .round-col {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .tournaments-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

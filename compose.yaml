@@ -1,0 +1,65 @@
+# Локальная разработка в Docker. Прод (BeGet shared) — отдельно, тут не описан.
+# Запуск:  docker compose up -d   →  сайт на http://localhost:8081
+services:
+  # PHP 8.5 + FPM — выполняет код Symfony.
+  php:
+    build:
+      context: ./docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    volumes:
+      - ./:/app
+    depends_on:
+      - db
+
+  # nginx — веб-сервер, отдаёт сайт и шлёт PHP в контейнер php.
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8090:80"            # сайт открывается на http://localhost:8090
+    volumes:
+      - ./:/app
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+
+  # MySQL — база данных. Креды тут ДЕВ-овые и одноразовые (контейнер локальный),
+  # боевые пароли будут в backend/.env.local (в git не идут).
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: nz
+      MYSQL_USER: nz
+      MYSQL_PASSWORD: nz
+    ports:
+      # Хостовый порт 3308 (внутри контейнера — 3306), чтобы не конфликтовать
+      # с MySQL других локальных проектов. Приложение ходит по db:3306 внутри сети.
+      - "3308:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # Mailpit — ловушка исходящих писем (только для дева). Веб-интерфейс, где
+  # видно все отправленные письма и можно кликнуть ссылку подтверждения.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"          # веб-интерфейс: http://localhost:8025
+    # SMTP слушает на 1025 внутри docker-сети (приложение шлёт на mailpit:1025).
+
+  # Node — дев-сервер/сборка React.
+  # working_dir = /app (а не /app/frontend): иначе Docker создаёт frontend/ от root
+  # до переключения на пользователя 1000. Внутрь frontend заходим в command.
+  node:
+    image: node:22-alpine
+    working_dir: /app
+    user: "1000:1000"
+    volumes:
+      - ./:/app
+    ports:
+      - "5175:5175"          # дев-сервер Vite (5175 — чтобы не конфликтовать с другими проектами)
+    command: sh -c "cd frontend && npm install && npm run dev"
+
+volumes:
+  db_data:

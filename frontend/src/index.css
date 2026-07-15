@@ -1,0 +1,42 @@
+/* Базовые стили и переменные. Mobile-first, но с богатым десктопом. */
+:root {
+  --text: #1a1c22;
+  --muted: #6b7280;
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --accent: #1f7a3d;
+  --accent-dark: #166030;
+  --accent-soft: rgba(31, 122, 61, 0.1);
+  --border: #e5e7eb;
+  --danger: #c0392b;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.06);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 0 0 16px;
+}
+
+h2 {
+  font-size: 1.15rem;
+}
