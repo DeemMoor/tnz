@@ -39,7 +39,7 @@ final class RegistrationController extends AbstractController
 
         $phone = $phoneNormalizer->normalize($rawPhone);
         if ($phone === null) {
-            $errors['phone'] = 'Некорректный номер телефона';
+            $errors['phone'] = 'Укажите мобильный в формате +7 9XX XXX-XX-XX';
         }
         if (mb_strlen($password) < 6) {
             $errors['password'] = 'Пароль минимум 6 символов';
