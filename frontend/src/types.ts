@@ -41,6 +41,22 @@ export type Tournament = {
   me: MyEntry | null
 }
 
+// Участник в публичном списке.
+export type Participant = {
+  name: string
+  avatarUrl: string | null
+  checkedIn: boolean
+}
+
+export type Participants = {
+  number: number
+  date: string
+  status: string
+  capacity: number
+  registered: Participant[]
+  waitlist: Participant[]
+}
+
 // Строка ростера на экране чекина у админа.
 export type RosterEntry = {
   userId: number

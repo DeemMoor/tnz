@@ -880,6 +880,40 @@ ol.roster {
   gap: 10px;
 }
 
+/* Публичный список участников. */
+.players-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 24px;
+  counter-reset: pl;
+}
+
+.players-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.players-list .pl-num {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  width: 24px;
+  text-align: right;
+}
+
+.players-list .pl-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.players-list .pl-check {
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .stats .rank {
   color: var(--muted);
   width: 32px;

@@ -92,7 +92,9 @@ export default function TournamentCard({ tournament }: { tournament: Tournament 
       </div>
 
       <div className="counts">
-        Участники: {t.registeredCount}/{t.capacity}
+        <Link to={`/tournaments/${t.id}/participants`} className="btn-link">
+          Участники: {t.registeredCount}/{t.capacity}
+        </Link>
         {t.waitlistCount > 0 && <> · очередь: {t.waitlistCount}</>}
       </div>
 

@@ -78,7 +78,9 @@ export default function HomePage() {
           <span className="ht-date">{formatDate(t.date)}</span>
         </div>
         <div className="ht-counts">
-          Участники: {t.registeredCount}/{t.capacity}
+          <Link to={`/tournaments/${t.id}/participants`} className="btn-link">
+            Участники: {t.registeredCount}/{t.capacity}
+          </Link>
           {t.waitlistCount > 0 && <> · очередь: {t.waitlistCount}</>}
         </div>
 

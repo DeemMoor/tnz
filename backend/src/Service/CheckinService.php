@@ -61,7 +61,7 @@ final class CheckinService
 
         $entry = $this->entries->findOneByTournamentAndUser($tournament, $user);
         if ($entry === null || $entry->getStatus() !== EntryStatus::Registered) {
-            throw new RegistrationException('Отметиться может только игрок из основы', 409);
+            throw new RegistrationException('Отметиться может только записанный участник', 409);
         }
 
         if (!$entry->isCheckedIn()) {

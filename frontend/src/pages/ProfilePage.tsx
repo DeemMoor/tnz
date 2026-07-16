@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { getMyTournaments } from '../api/tournaments'
 import { uploadAvatar, deleteAvatar } from '../api/profile'
@@ -8,7 +8,8 @@ import type { MyTournamentStat } from '../types'
 
 // ProfilePage — личный кабинет: правка имени/email, подтверждение email.
 export default function ProfilePage() {
-  const { user, refresh } = useAuth()
+  const { user, refresh, logout } = useAuth()
+  const navigate = useNavigate()
   // useSearchParams — читает query-параметры адреса (?verified=1 после письма).
   const [params] = useSearchParams()
   const verifiedParam = params.get('verified')
@@ -136,6 +137,11 @@ export default function ProfilePage() {
     await deleteAvatar()
     await refresh()
     setBusy(false)
+  }
+
+  async function onLogout() {
+    await logout()
+    navigate('/')
   }
 
   async function changePassword(e: FormEvent) {
@@ -348,6 +354,10 @@ export default function ProfilePage() {
               </button>
             </form>
           </details>
+
+          <button type="button" className="secondary logout" onClick={onLogout}>
+            Выйти
+          </button>
         </div>
 
       {/* История выступлений по турнирам. */}

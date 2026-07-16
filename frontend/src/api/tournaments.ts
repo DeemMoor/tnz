@@ -1,4 +1,4 @@
-import type { Tournament, MyTournamentStat } from '../types'
+import type { Tournament, MyTournamentStat, Participants } from '../types'
 
 // Слой запросов к API турниров — чтобы компоненты не дёргали fetch напрямую.
 
@@ -12,6 +12,13 @@ export async function listTournaments(): Promise<Tournament[]> {
 export async function getNearestTournament(): Promise<Tournament | null> {
   const res = await fetch('/api/tournaments/nearest', { credentials: 'include' })
   if (!res.ok) throw new Error('Не удалось загрузить ближайший турнир')
+  return res.json()
+}
+
+// Публичный список участников турнира.
+export async function getParticipants(id: number): Promise<Participants> {
+  const res = await fetch(`/api/tournaments/${id}/participants`)
+  if (!res.ok) throw new Error('Не удалось загрузить участников')
   return res.json()
 }
 

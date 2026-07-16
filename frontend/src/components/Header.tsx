@@ -1,17 +1,11 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import Avatar from './Avatar'
 
 // Header — общая шапка с навигацией. Рендерится на всех страницах,
 // поэтому вернуться на главную/в разделы можно откуда угодно.
 export default function Header() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-
-  async function onLogout() {
-    await logout()
-    navigate('/')
-  }
+  const { user } = useAuth()
 
   return (
     <header className="app-header">
@@ -23,15 +17,10 @@ export default function Header() {
           <NavLink to="/tournaments">Турниры</NavLink>
           <NavLink to="/stats">Статистика</NavLink>
           {user ? (
-            <>
-              <NavLink to="/profile" className="nav-profile">
-                <Avatar name={user.displayName} url={user.avatarUrl} size={26} />
-                <span>Кабинет</span>
-              </NavLink>
-              <button type="button" className="nav-logout" onClick={onLogout}>
-                Выйти
-              </button>
-            </>
+            <NavLink to="/profile" className="nav-profile">
+              <Avatar name={user.displayName} url={user.avatarUrl} size={26} />
+              <span>Кабинет</span>
+            </NavLink>
           ) : (
             <NavLink to="/login">Войти</NavLink>
           )}

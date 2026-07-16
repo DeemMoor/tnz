@@ -10,9 +10,11 @@ use App\Enum\EntryStatus;
 use App\Exception\RegistrationException;
 use App\Repository\TournamentEntryRepository;
 use App\Repository\TournamentRepository;
+use App\Entity\TournamentEntry;
 use App\Service\CheckinService;
 use App\Service\RegistrationService;
 use App\Service\TournamentSchedule;
+use App\Service\UserPresenter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
@@ -28,6 +30,7 @@ final class TournamentController extends AbstractController
         private readonly TournamentRepository $tournaments,
         private readonly TournamentEntryRepository $entries,
         private readonly TournamentSchedule $schedule,
+        private readonly UserPresenter $presenter,
     ) {
     }
 
@@ -89,6 +92,31 @@ final class TournamentController extends AbstractController
         }
 
         return $this->json($this->view($tournament, $user));
+    }
+
+    /**
+     * Публичный список участников: основа и очередь (имена + аватары, без телефонов).
+     */
+    #[Route('/api/tournaments/{id}/participants', name: 'api_tournaments_participants', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function participants(Tournament $tournament): JsonResponse
+    {
+        $main = $this->entries->findByStatusOrdered($tournament, EntryStatus::Registered);
+        $waitlist = $this->entries->findByStatusOrdered($tournament, EntryStatus::Waitlisted);
+
+        $view = fn (TournamentEntry $e) => [
+            'name' => $e->getUser()->getDisplayName(),
+            'avatarUrl' => $this->presenter->avatarUrl($e->getUser()),
+            'checkedIn' => $e->isCheckedIn(),
+        ];
+
+        return $this->json([
+            'number' => $this->schedule->number($tournament),
+            'date' => $tournament->getDate()->format('Y-m-d'),
+            'status' => $tournament->getStatus()->value,
+            'capacity' => Tournament::CAPACITY,
+            'registered' => array_map($view, $main),
+            'waitlist' => array_map($view, $waitlist),
+        ]);
     }
 
     #[Route('/api/tournaments/{id}/checkin', name: 'api_tournaments_checkin', methods: ['POST'], requirements: ['id' => '\d+'])]
