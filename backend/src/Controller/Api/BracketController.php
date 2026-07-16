@@ -104,6 +104,6 @@ final class BracketController extends AbstractController
             return null;
         }
 
-        return ['id' => $user->getId(), 'name' => $user->getName()];
+        return ['id' => $user->getId(), 'name' => $user->getDisplayName()];
     }
 }

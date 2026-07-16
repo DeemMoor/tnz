@@ -18,6 +18,8 @@ services:
             string $mailerFrom: '%env(MAILER_FROM)%'
             # База для ссылок в письмах (подтверждение email).
             string $publicUrl: '%env(APP_PUBLIC_URL)%'
+            # Папка для аватарок (внутри public, отдаётся статикой).
+            string $avatarsDir: '%kernel.project_dir%/public/uploads/avatars'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Entity\User;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminDashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
+use EasyCorp\Bundle\EasyAdminBundle\Config\UserMenu;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * Точка входа в админку (EasyAdmin) на /admin.
@@ -39,8 +42,17 @@ final class DashboardController extends AbstractDashboardController
 
     public function configureMenuItems(): iterable
     {
-        yield MenuItem::linkToDashboard('Дашборд', 'fa fa-home');
         yield MenuItem::linkTo(TournamentCrudController::class, 'Турниры', 'fa fa-trophy');
         yield MenuItem::linkTo(UserCrudController::class, 'Игроки', 'fa fa-users');
+    }
+
+    /**
+     * В правом верхнем углу показываем имя игрока, а не телефон.
+     */
+    public function configureUserMenu(UserInterface $user): UserMenu
+    {
+        $name = $user instanceof User ? $user->getDisplayName() : $user->getUserIdentifier();
+
+        return parent::configureUserMenu($user)->setName($name);
     }
 }

@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Exception\RegistrationException;
 use App\Repository\UserRepository;
+use App\Service\AvatarUploader;
 use App\Service\EmailVerifier;
 use App\Service\PlayerHistoryService;
+use App\Service\UserPresenter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -32,6 +36,7 @@ final class ProfileController extends AbstractController
         #[CurrentUser] User $user,
         UserRepository $users,
         EmailVerifier $emailVerifier,
+        UserPresenter $presenter,
         EntityManagerInterface $em,
     ): JsonResponse {
         /** @var array<string, mixed> $data */
@@ -45,6 +50,26 @@ final class ProfileController extends AbstractController
                 $errors['name'] = 'Имя не может быть пустым';
             } else {
                 $user->setName($name);
+            }
+        }
+
+        if (\array_key_exists('nickname', $data)) {
+            $nick = \is_string($data['nickname']) ? trim($data['nickname']) : '';
+            if (mb_strlen($nick) > 50) {
+                $errors['nickname'] = 'Ник слишком длинный (до 50 символов)';
+            } else {
+                $user->setNickname($nick !== '' ? $nick : null);
+            }
+        }
+
+        if (\array_key_exists('telegram', $data)) {
+            $tg = \is_string($data['telegram']) ? trim($data['telegram']) : '';
+            // Нормализуем: убираем ведущий @ и пробелы, храним без @.
+            $tg = ltrim($tg, '@');
+            if (mb_strlen($tg) > 100) {
+                $errors['telegram'] = 'Слишком длинное значение';
+            } else {
+                $user->setTelegram($tg !== '' ? $tg : null);
             }
         }
 
@@ -93,7 +118,52 @@ final class ProfileController extends AbstractController
 
         $em->flush();
 
-        return $this->json($this->userView($user));
+        return $this->json($presenter->view($user));
+    }
+
+    /**
+     * POST /api/me/avatar — загрузить аватарку (multipart, поле "avatar").
+     */
+    #[Route('/api/me/avatar', name: 'api_me_avatar', methods: ['POST'])]
+    public function uploadAvatar(
+        Request $request,
+        #[CurrentUser] User $user,
+        AvatarUploader $uploader,
+        UserPresenter $presenter,
+        EntityManagerInterface $em,
+    ): JsonResponse {
+        $file = $request->files->get('avatar');
+        if (!$file instanceof UploadedFile) {
+            return $this->json(['error' => 'Файл не передан'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        try {
+            $filename = $uploader->upload($user, $file);
+        } catch (RegistrationException $e) {
+            return $this->json(['error' => $e->getMessage()], $e->statusCode);
+        }
+
+        $user->setAvatarPath($filename);
+        $em->flush();
+
+        return $this->json($presenter->view($user));
+    }
+
+    /**
+     * DELETE /api/me/avatar — удалить аватарку (вернуться к букве).
+     */
+    #[Route('/api/me/avatar', name: 'api_me_avatar_delete', methods: ['DELETE'])]
+    public function deleteAvatar(
+        #[CurrentUser] User $user,
+        AvatarUploader $uploader,
+        UserPresenter $presenter,
+        EntityManagerInterface $em,
+    ): JsonResponse {
+        $uploader->deleteCurrent($user);
+        $user->setAvatarPath(null);
+        $em->flush();
+
+        return $this->json($presenter->view($user));
     }
 
     /**
@@ -127,22 +197,5 @@ final class ProfileController extends AbstractController
         PlayerHistoryService $history,
     ): JsonResponse {
         return $this->json(['tournaments' => $history->forUser($user)]);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function userView(User $user): array
-    {
-        return [
-            'id' => $user->getId(),
-            'phone' => $user->getPhone(),
-            'name' => $user->getName(),
-            'email' => $user->getEmail(),
-            'emailVerified' => $user->isEmailVerified(),
-            'rttfRating' => $user->getRttfRating(),
-            'roles' => $user->getRoles(),
-            'isChampion' => $user->isChampion(),
-        ];
     }
 }

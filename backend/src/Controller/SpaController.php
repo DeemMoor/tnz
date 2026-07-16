@@ -22,7 +22,7 @@ final class SpaController extends AbstractController
     #[Route(
         '/{path}',
         name: 'spa_fallback',
-        requirements: ['path' => '^(?!api|admin|bundles|assets|_(profiler|wdt)).+'],
+        requirements: ['path' => '^(?!api|admin|bundles|assets|uploads|_(profiler|wdt)).+'],
         methods: ['GET'],
         priority: -100,
     )]

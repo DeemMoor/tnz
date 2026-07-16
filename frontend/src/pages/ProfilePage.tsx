@@ -1,7 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { getMyTournaments } from '../api/tournaments'
+import { uploadAvatar, deleteAvatar } from '../api/profile'
+import Avatar from '../components/Avatar'
 import type { MyTournamentStat } from '../types'
 
 // ProfilePage — личный кабинет: правка имени/email, подтверждение email.
@@ -12,7 +14,10 @@ export default function ProfilePage() {
   const verifiedParam = params.get('verified')
 
   const [name, setName] = useState(user?.name ?? '')
+  const [nickname, setNickname] = useState(user?.nickname ?? '')
+  const [telegram, setTelegram] = useState(user?.telegram ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
+  const fileRef = useRef<HTMLInputElement>(null)
   // Рейтинг RTTF: чекбокс «есть рейтинг» + число. null у пользователя = нет.
   const [hasRating, setHasRating] = useState(user?.rttfRating != null)
   const [rating, setRating] = useState(
@@ -22,6 +27,8 @@ export default function ProfilePage() {
     name?: string
     email?: string
     rttfRating?: string
+    nickname?: string
+    telegram?: string
   }>({})
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -51,6 +58,8 @@ export default function ProfilePage() {
   // «Сохранить» показываем только если данные реально изменились.
   const isDirty =
     name !== (user.name ?? '') ||
+    nickname !== (user.nickname ?? '') ||
+    telegram !== (user.telegram ?? '') ||
     (email || '') !== (user.email ?? '') ||
     hasRating !== (user.rttfRating != null) ||
     (hasRating && rating !== String(user.rttfRating ?? ''))
@@ -67,6 +76,8 @@ export default function ProfilePage() {
         credentials: 'include',
         body: JSON.stringify({
           name,
+          nickname: nickname || null,
+          telegram: telegram || null,
           email: email || null,
           rttfRating: hasRating && rating !== '' ? Number(rating) : null,
         }),
@@ -99,6 +110,29 @@ export default function ProfilePage() {
     }
   }
 
+  async function onAvatarPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setNotice(null)
+    setBusy(true)
+    const res = await uploadAvatar(file)
+    if (res.ok) {
+      await refresh()
+      setNotice('Аватар обновлён')
+    } else {
+      setNotice(res.error ?? 'Не удалось загрузить аватар')
+    }
+    setBusy(false)
+    if (fileRef.current) fileRef.current.value = '' // сбросить выбор
+  }
+
+  async function onAvatarRemove() {
+    setBusy(true)
+    await deleteAvatar()
+    await refresh()
+    setBusy(false)
+  }
+
   return (
     <main className="page">
       <h1>Личный кабинет</h1>
@@ -115,6 +149,39 @@ export default function ProfilePage() {
       <div className="profile-layout">
         <div className="card profile-settings">
           <h2>Профиль</h2>
+
+          {/* Аватар: превью + загрузка/удаление. */}
+          <div className="avatar-edit">
+            <Avatar name={user.displayName} url={user.avatarUrl} size={72} />
+            <div className="avatar-buttons">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={onAvatarPick}
+              />
+              <button
+                type="button"
+                className="secondary small"
+                onClick={() => fileRef.current?.click()}
+                disabled={busy}
+              >
+                {user.avatarUrl ? 'Сменить фото' : 'Загрузить фото'}
+              </button>
+              {user.avatarUrl && (
+                <button
+                  type="button"
+                  className="btn-link"
+                  onClick={onAvatarRemove}
+                  disabled={busy}
+                >
+                  Удалить
+                </button>
+              )}
+            </div>
+          </div>
+
           <p className="muted">Телефон: {user.phone}</p>
 
       <form className="form" onSubmit={save}>
@@ -122,6 +189,24 @@ export default function ProfilePage() {
           Фамилия и Имя
           <input value={name} onChange={(e) => setName(e.target.value)} required />
           {errors.name && <span className="field-error">{errors.name}</span>}
+        </label>
+        <label>
+          Ник (необязательно)
+          <input
+            value={nickname}
+            placeholder="как показывать в сетке"
+            onChange={(e) => setNickname(e.target.value)}
+          />
+          {errors.nickname && <span className="field-error">{errors.nickname}</span>}
+        </label>
+        <label>
+          Telegram (необязательно)
+          <input
+            value={telegram}
+            placeholder="@username"
+            onChange={(e) => setTelegram(e.target.value)}
+          />
+          {errors.telegram && <span className="field-error">{errors.telegram}</span>}
         </label>
         <label>
           Email

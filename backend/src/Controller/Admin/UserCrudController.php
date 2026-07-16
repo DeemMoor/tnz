@@ -43,7 +43,9 @@ final class UserCrudController extends AbstractCrudController
     {
         yield IdField::new('id')->hideOnForm();
         yield TextField::new('name', 'Фамилия и Имя');
+        yield TextField::new('nickname', 'Ник')->hideOnIndex();
         yield TextField::new('phone', 'Телефон');
+        yield TextField::new('telegram', 'Telegram')->hideOnIndex();
         yield EmailField::new('email', 'Email');
         yield BooleanField::new('emailVerified', 'Email подтверждён')->renderAsSwitch(false);
         yield IntegerField::new('rttfRating', 'RTTF')->hideOnIndex();

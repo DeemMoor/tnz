@@ -17,6 +17,7 @@ final class StatsService
     public function __construct(
         private readonly BracketMatchRepository $matches,
         private readonly UserRepository $users,
+        private readonly UserPresenter $presenter,
     ) {
     }
 
@@ -24,7 +25,7 @@ final class StatsService
      * Таблица лидеров: по одному ряду на игрока, у кого есть сыгранные матчи.
      * Сортировка: очки ↓, победы ↓, имя ↑.
      *
-     * @return list<array{userId: int, name: string, games: int, wins: int, losses: int, points: int}>
+     * @return list<array{userId: int, name: string, avatarUrl: string|null, games: int, wins: int, losses: int, points: int}>
      */
     public function leaderboard(): array
     {
@@ -45,11 +46,13 @@ final class StatsService
             return [];
         }
 
-        // Имена одним запросом.
+        // Имена и аватары одним запросом.
         $names = [];
+        $avatars = [];
         foreach ($this->users->findBy(['id' => array_keys($played)]) as $user) {
             /** @var User $user */
-            $names[$user->getId()] = $user->getName();
+            $names[$user->getId()] = $user->getDisplayName();
+            $avatars[$user->getId()] = $this->presenter->avatarUrl($user);
         }
 
         $rows = [];
@@ -58,6 +61,7 @@ final class StatsService
             $rows[] = [
                 'userId' => $userId,
                 'name' => $names[$userId] ?? '—',
+                'avatarUrl' => $avatars[$userId] ?? null,
                 'games' => $games,
                 'wins' => $w,
                 'losses' => $games - $w,

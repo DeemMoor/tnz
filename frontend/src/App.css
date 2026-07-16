@@ -54,6 +54,43 @@
   background: var(--accent-soft);
 }
 
+/* --- Аватар --- */
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.avatar-letter {
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.nav-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar-edit {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.avatar-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
 /* «Выйти» в шапке — неприметная, чтобы не жалась к навигации и не путалась. */
 .nav-logout {
   min-height: auto;
@@ -789,6 +826,12 @@ ol.roster {
 .stats .pname {
   text-align: left;
   font-weight: 600;
+}
+
+.pname-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .stats .rank {

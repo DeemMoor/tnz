@@ -35,6 +35,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 100)]
     private string $name;
 
+    /** Ник (прозвище). Если задан — показывается вместо ФИО в сетке/статистике. */
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $nickname = null;
+
+    /** Telegram-контакт (@username или ссылка), просто для связи. */
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $telegram = null;
+
+    /** Имя файла аватарки в public/uploads/avatars/ (null = буква-аватар). */
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $avatarPath = null;
+
     #[ORM\Column(length: 180, nullable: true)]
     private ?string $email = null;
 
@@ -113,6 +125,50 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setName(string $name): static
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    public function getNickname(): ?string
+    {
+        return $this->nickname;
+    }
+
+    public function setNickname(?string $nickname): static
+    {
+        $this->nickname = $nickname;
+
+        return $this;
+    }
+
+    /**
+     * Отображаемое имя: ник, если задан, иначе ФИО.
+     */
+    public function getDisplayName(): string
+    {
+        return ($this->nickname !== null && $this->nickname !== '') ? $this->nickname : $this->name;
+    }
+
+    public function getTelegram(): ?string
+    {
+        return $this->telegram;
+    }
+
+    public function setTelegram(?string $telegram): static
+    {
+        $this->telegram = $telegram;
+
+        return $this;
+    }
+
+    public function getAvatarPath(): ?string
+    {
+        return $this->avatarPath;
+    }
+
+    public function setAvatarPath(?string $avatarPath): static
+    {
+        $this->avatarPath = $avatarPath;
 
         return $this;
     }

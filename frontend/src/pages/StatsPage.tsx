@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { PlayerStat } from '../types'
 import { getStats } from '../api/stats'
+import Avatar from '../components/Avatar'
 
 // StatsPage — публичная таблица игроков: игры, победы, поражения, очки.
 export default function StatsPage() {
@@ -40,7 +41,12 @@ export default function StatsPage() {
             {players.map((p, i) => (
               <tr key={p.userId}>
                 <td className="rank">{i + 1}</td>
-                <td className="pname">{p.name}</td>
+                <td className="pname">
+                  <span className="pname-cell">
+                    <Avatar name={p.name} url={p.avatarUrl} size={28} />
+                    {p.name}
+                  </span>
+                </td>
                 <td>{p.games}</td>
                 <td>{p.wins}</td>
                 <td>{p.losses}</td>

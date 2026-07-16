@@ -10,15 +10,15 @@ export default function RegisterPage() {
   const { login, user } = useAuth()
   const navigate = useNavigate()
 
-  // Уже вошёл — регистрация не нужна.
-  if (user) return <Navigate to="/" replace />
-
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<RegisterErrors>({})
   const [common, setCommon] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // Уже вошёл — регистрация не нужна (после хуков — правила хуков React).
+  if (user) return <Navigate to="/" replace />
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()

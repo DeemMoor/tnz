@@ -5,6 +5,10 @@ export type Me = {
   id: number
   phone: string
   name: string
+  nickname: string | null
+  displayName: string // ник, если задан, иначе ФИО
+  telegram: string | null // без ведущего @
+  avatarUrl: string | null // относительный URL или null (тогда буква-аватар)
   email: string | null
   emailVerified: boolean
   rttfRating: number | null // рейтинг на rttf.ru; null = нет рейтинга
@@ -62,6 +66,7 @@ export type MyTournamentStat = {
 export type PlayerStat = {
   userId: number
   name: string
+  avatarUrl: string | null
   games: number
   wins: number
   losses: number

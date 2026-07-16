@@ -15,6 +15,9 @@
 /backend/public/icons.svg
 /backend/public/vite.svg
 
+# Загруженные аватарки (пользовательские данные, не в git)
+/backend/public/uploads/
+
 # Прочее
 .DS_Store
 *.log

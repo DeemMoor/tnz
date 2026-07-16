@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Service\UserPresenter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
@@ -23,9 +24,9 @@ final class SecurityController extends AbstractController
      * сюда не доходит: firewall сам отдаёт 401.
      */
     #[Route('/api/login', name: 'api_login', methods: ['POST'])]
-    public function login(#[CurrentUser] ?User $user): JsonResponse
+    public function login(#[CurrentUser] ?User $user, UserPresenter $presenter): JsonResponse
     {
-        return $this->me($user);
+        return $this->me($user, $presenter);
     }
 
     /**
@@ -41,21 +42,12 @@ final class SecurityController extends AbstractController
      * GET /api/me — текущий залогиненный пользователь.
      */
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
-    public function me(#[CurrentUser] ?User $user): JsonResponse
+    public function me(#[CurrentUser] ?User $user, UserPresenter $presenter): JsonResponse
     {
         if ($user === null) {
             return $this->json(['error' => 'Не авторизован'], 401);
         }
 
-        return $this->json([
-            'id' => $user->getId(),
-            'phone' => $user->getPhone(),
-            'name' => $user->getName(),
-            'email' => $user->getEmail(),
-            'emailVerified' => $user->isEmailVerified(),
-            'rttfRating' => $user->getRttfRating(),
-            'roles' => $user->getRoles(),
-            'isChampion' => $user->isChampion(),
-        ]);
+        return $this->json($presenter->view($user));
     }
 }

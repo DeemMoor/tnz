@@ -7,14 +7,15 @@ export default function LoginPage() {
   const { login, user } = useAuth()
   const navigate = useNavigate()
 
-  // Уже вошёл — форма входа не нужна, отправляем на главную.
-  if (user) return <Navigate to="/" replace />
-
   // state — «память» компонента: значения полей и текст ошибки.
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // Уже вошёл — форма входа не нужна, отправляем на главную.
+  // (после хуков — чтобы не нарушать правила хуков React)
+  if (user) return <Navigate to="/" replace />
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault() // не перезагружать страницу при отправке формы
