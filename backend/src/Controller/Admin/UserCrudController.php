@@ -56,7 +56,7 @@ final class UserCrudController extends AbstractCrudController
     {
         yield IdField::new('id')->hideOnForm();
         yield TextField::new('name', 'Фамилия и Имя');
-        yield TextField::new('nickname', 'Ник')->hideOnIndex();
+        yield TextField::new('nickname', 'Ник');
         yield TextField::new('phone', 'Телефон');
         // Пароль: обязателен при создании, при правке — пусто = не менять.
         yield TextField::new('plainPassword', 'Пароль')
@@ -64,7 +64,7 @@ final class UserCrudController extends AbstractCrudController
             ->onlyOnForms()
             ->setRequired(Crud::PAGE_NEW === $pageName)
             ->setHelp('При создании — задайте пароль (мин. 6). При правке пусто = не менять.');
-        yield TextField::new('telegram', 'Telegram')->hideOnIndex();
+        yield TextField::new('telegram', 'Telegram');
         yield EmailField::new('email', 'Email');
         yield BooleanField::new('emailVerified', 'Email подтверждён')->renderAsSwitch(false);
         yield IntegerField::new('rttfRating', 'RTTF')->hideOnIndex();
