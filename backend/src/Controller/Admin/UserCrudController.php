@@ -5,18 +5,27 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\User;
+use App\Enum\EntryStatus;
+use App\Exception\RegistrationException;
+use App\Repository\TournamentRepository;
 use App\Service\PhoneNormalizer;
+use App\Service\RegistrationService;
+use App\Service\TournamentSchedule;
 use Doctrine\ORM\EntityManagerInterface;
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
+use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\EmailField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -46,10 +55,50 @@ final class UserCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
+        // Быстрая запись игрока на ближайший турнир прямо из списка.
+        $toTournament = Action::new('toTournament', 'На турнир', 'fa fa-plus')
+            ->linkToCrudAction('registerToTournament');
+
         return $actions
+            ->add(Crud::PAGE_INDEX, $toTournament)
+            ->add(Crud::PAGE_DETAIL, $toTournament)
             ->update(Crud::PAGE_INDEX, Action::NEW, static fn (Action $a) => $a->setLabel('Добавить игрока'))
             ->update(Crud::PAGE_INDEX, Action::EDIT, static fn (Action $a) => $a->setLabel('Изменить'))
             ->update(Crud::PAGE_INDEX, Action::DELETE, static fn (Action $a) => $a->setLabel('Удалить'));
+    }
+
+    /**
+     * Записать игрока на ближайший (незавершённый) турнир.
+     */
+    #[AdminRoute(path: '{entityId}/to-tournament', name: 'register_to_tournament')]
+    public function registerToTournament(
+        AdminContext $context,
+        TournamentRepository $tournaments,
+        RegistrationService $registration,
+        TournamentSchedule $schedule,
+        AdminUrlGenerator $urlGenerator,
+    ): RedirectResponse {
+        $user = $context->getEntity()->getInstance();
+        $tournament = $tournaments->findNearestUpcoming();
+
+        if (!$user instanceof User) {
+            $this->addFlash('danger', 'Игрок не найден.');
+        } elseif ($tournament === null) {
+            $this->addFlash('warning', 'Нет ближайшего турнира — сначала создайте турнир.');
+        } else {
+            try {
+                $entry = $registration->register($tournament, $user, ignoreSchedule: true);
+                $number = $schedule->number($tournament);
+                $where = $entry->getStatus() === EntryStatus::Waitlisted ? 'в очередь ожидания' : 'в участники';
+                $this->addFlash('success', "{$user->getName()} записан на турнир #{$number} ({$where}).");
+            } catch (RegistrationException $e) {
+                $this->addFlash('warning', $e->getMessage());
+            }
+        }
+
+        return $this->redirect(
+            $urlGenerator->setController(self::class)->setAction(Action::INDEX)->generateUrl(),
+        );
     }
 
     public function configureFields(string $pageName): iterable

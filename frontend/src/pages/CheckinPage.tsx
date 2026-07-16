@@ -117,15 +117,19 @@ export default function CheckinPage() {
             </div>
           )}
 
-          {/* До жеребьёвки — управление составом. */}
+          {/* До жеребьёвки — добавление игрока в турнир (нового или уже заведённого). */}
           {!drawn && (
             <form className="form walkin card" onSubmit={onWalkIn}>
-              <strong>Добавить пришедшего (walk-in)</strong>
-              <input type="text" placeholder="Фамилия и Имя" value={wiName} onChange={(e) => setWiName(e.target.value)} required />
+              <strong>Добавить участника</strong>
               <input type="tel" placeholder="Телефон" value={wiPhone} onChange={(e) => setWiPhone(e.target.value)} required />
+              <input type="text" placeholder="Фамилия и Имя (только для нового игрока)" value={wiName} onChange={(e) => setWiName(e.target.value)} />
+              <span className="hint">
+                Если игрок уже зарегистрирован — впиши только телефон. В день турнира
+                (окно чекина) добавленный сразу отмечается как пришедший.
+              </span>
               {wiError && <div className="form-error">{wiError}</div>}
               <button type="submit" disabled={busy}>
-                Добавить и отметить
+                Добавить в турнир
               </button>
             </form>
           )}

@@ -73,12 +73,14 @@ final class CheckinService
     }
 
     /**
-     * Walk-in: админ заводит игрока «с колёс» (телефон + имя) и сразу чекинит.
+     * Админ добавляет игрока в турнир по телефону (+имя, если игрок новый).
      * Если игрок с таким телефоном уже есть — используем его аккаунт.
+     * Отмечаем присутствие сразу только если открыто окно чекина (день турнира);
+     * во время обычной регистрации — просто записываем в участники.
      *
      * @throws RegistrationException
      */
-    public function walkIn(Tournament $tournament, string $rawPhone, string $name): TournamentEntry
+    public function walkIn(Tournament $tournament, string $rawPhone, string $name, ?\DateTimeImmutable $now = null): TournamentEntry
     {
         $this->assertNotDrawn($tournament);
 
@@ -87,25 +89,27 @@ final class CheckinService
             throw new RegistrationException('Некорректный номер телефона', 422);
         }
         $name = trim($name);
-        if ($name === '') {
-            throw new RegistrationException('Укажите имя', 422);
-        }
 
         $user = $this->users->findOneByPhone($phone);
         if ($user === null) {
+            if ($name === '') {
+                throw new RegistrationException('Укажите имя нового игрока', 422);
+            }
             $user = new User();
             $user->setPhone($phone);
             $user->setName($name);
             // Временный случайный пароль: аккаунт существует для сетки/статистики.
-            // Полноценный вход игрок получит после сброса пароля (отдельная задача).
+            // Полноценный вход игрок получит после смены пароля.
             $user->setPassword($this->hasher->hashPassword($user, bin2hex(random_bytes(8))));
             $this->em->persist($user);
             $this->em->flush();
         }
 
-        // Ставим на турнир в обход окна регистрации (админ на месте), затем чекиним.
+        // Ставим на турнир в обход окна регистрации (это делает админ).
         $entry = $this->registration->register($tournament, $user, ignoreSchedule: true);
-        if ($entry->getStatus() === EntryStatus::Registered) {
+
+        // Отмечаем сразу только в окно чекина (день турнира). Иначе — только запись.
+        if ($entry->getStatus() === EntryStatus::Registered && $this->schedule->isCheckinOpen($tournament, $now)) {
             $entry->setCheckedIn(true);
             $this->em->flush();
         }

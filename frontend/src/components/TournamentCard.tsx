@@ -151,7 +151,7 @@ export default function TournamentCard({ tournament }: { tournament: Tournament 
         {/* Экран чекина админу — только в фазе записи/чекина. */}
         {isAdmin && preDraw && (
           <Link className="btn-link" to={`/checkin/${t.id}`}>
-            Экран чекина (админ)
+            Управление турниром (админ)
           </Link>
         )}
       </div>
