@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -164,6 +165,35 @@ final class ProfileController extends AbstractController
         $em->flush();
 
         return $this->json($presenter->view($user));
+    }
+
+    /**
+     * POST /api/me/password — сменить пароль.
+     * Тело: { currentPassword, newPassword }. Нужен текущий пароль (подтверждение).
+     */
+    #[Route('/api/me/password', name: 'api_me_password', methods: ['POST'])]
+    public function changePassword(
+        Request $request,
+        #[CurrentUser] User $user,
+        UserPasswordHasherInterface $hasher,
+        EntityManagerInterface $em,
+    ): JsonResponse {
+        /** @var array<string, mixed> $data */
+        $data = json_decode($request->getContent(), true) ?? [];
+        $current = \is_string($data['currentPassword'] ?? null) ? $data['currentPassword'] : '';
+        $new = \is_string($data['newPassword'] ?? null) ? $data['newPassword'] : '';
+
+        if (!$hasher->isPasswordValid($user, $current)) {
+            return $this->json(['error' => 'Текущий пароль неверный'], Response::HTTP_FORBIDDEN);
+        }
+        if (mb_strlen($new) < 6) {
+            return $this->json(['error' => 'Новый пароль минимум 6 символов'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $user->setPassword($hasher->hashPassword($user, $new));
+        $em->flush();
+
+        return $this->json(['status' => 'ok']);
     }
 
     /**

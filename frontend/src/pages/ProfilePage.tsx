@@ -33,6 +33,11 @@ export default function ProfilePage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [history, setHistory] = useState<MyTournamentStat[] | null>(null)
+  // Смена пароля — отдельная форма.
+  const [curPass, setCurPass] = useState('')
+  const [newPass, setNewPass] = useState('')
+  const [pwMsg, setPwMsg] = useState<string | null>(null)
+  const [pwErr, setPwErr] = useState<string | null>(null)
 
   // Подтягиваем историю выступлений один раз при открытии кабинета.
   useEffect(() => {
@@ -131,6 +136,31 @@ export default function ProfilePage() {
     await deleteAvatar()
     await refresh()
     setBusy(false)
+  }
+
+  async function changePassword(e: FormEvent) {
+    e.preventDefault()
+    setPwMsg(null)
+    setPwErr(null)
+    setBusy(true)
+    try {
+      const res = await fetch('/api/me/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ currentPassword: curPass, newPassword: newPass }),
+      })
+      if (res.ok) {
+        setPwMsg('Пароль изменён')
+        setCurPass('')
+        setNewPass('')
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setPwErr(data.error ?? 'Не удалось сменить пароль')
+      }
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -285,6 +315,39 @@ export default function ProfilePage() {
           </button>
         )}
       </form>
+
+          {/* Смена пароля — отдельная форма. */}
+          <details className="password-block">
+            <summary>Сменить пароль</summary>
+            <form className="form" onSubmit={changePassword}>
+              <label>
+                Текущий пароль
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={curPass}
+                  onChange={(e) => setCurPass(e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Новый пароль
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="минимум 6 символов"
+                  value={newPass}
+                  onChange={(e) => setNewPass(e.target.value)}
+                  required
+                />
+              </label>
+              {pwErr && <div className="form-error">{pwErr}</div>}
+              {pwMsg && <div className="form-note">{pwMsg}</div>}
+              <button type="submit" disabled={busy}>
+                Изменить пароль
+              </button>
+            </form>
+          </details>
         </div>
 
       {/* История выступлений по турнирам. */}

@@ -115,6 +115,28 @@
   align-items: flex-start;
 }
 
+/* Смена пароля — сворачиваемый блок. */
+.password-block {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.password-block summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  list-style: none;
+}
+
+.password-block summary::-webkit-details-marker {
+  display: none;
+}
+
+.password-block[open] summary {
+  margin-bottom: 8px;
+}
+
 /* «Выйти» в шапке — неприметная, чтобы не жалась к навигации и не путалась. */
 .nav-logout {
   min-height: auto;
