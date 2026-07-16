@@ -136,13 +136,13 @@ php8.5 bin/console app:create-admin "<телефон>" "<пароль>" "<Фам
 на ближайшее воскресенье (идемпотентна). Ставим в cron **на четверг ~16:00**
 (к открытию регистрации).
 
-Панель BeGet → **Cron** (или `crontab -e`), строка:
+На BeGet shared нет `crontab` в консоли — крон задаётся **в панели** (раздел «Cron»).
+Строка задания (абсолютные пути, php по `/usr/local/bin/php8.5`):
 ```
-0 16 * * 4  cd ~/tnz.deemmoor.beget.tech/app/backend && /usr/bin/php8.5 bin/console app:ensure-tournament >> ~/tnz-cron.log 2>&1
+0 16 * * 4  cd /home/d/deemmoor/tnz.deemmoor.beget.tech/app/backend && /usr/local/bin/php8.5 bin/console app:ensure-tournament >> /home/d/deemmoor/tnz-cron.log 2>&1
 ```
 - `0 16 * * 4` — минута 0, час 16, любой день/месяц, **день недели 4 = четверг**.
-- Проверить путь к php: `which php8.5` (у BeGet бывает `/usr/local/bin/php8.5`).
-- Разово запустить сейчас для проверки: `php8.5 bin/console app:ensure-tournament`.
+- Разово проверить: `php8.5 bin/console app:ensure-tournament`.
 
 Первый турнир можно и руками: `/admin` → **Турниры → создать** (дата = воскресенье, статус `registration`).
 
