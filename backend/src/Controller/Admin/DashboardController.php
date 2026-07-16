@@ -44,6 +44,7 @@ final class DashboardController extends AbstractDashboardController
     {
         yield MenuItem::linkTo(TournamentCrudController::class, 'Турниры', 'fa fa-trophy');
         yield MenuItem::linkTo(UserCrudController::class, 'Игроки', 'fa fa-users');
+        yield MenuItem::linkTo(NotificationLogCrudController::class, 'Рассылки', 'fa fa-envelope');
     }
 
     /**

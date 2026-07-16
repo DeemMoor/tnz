@@ -7,6 +7,7 @@ namespace App\Command;
 use App\Entity\Tournament;
 use App\Enum\TournamentStatus;
 use App\Repository\TournamentRepository;
+use App\Service\NotificationService;
 use App\Service\TournamentSchedule;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -30,6 +31,7 @@ final class EnsureTournamentCommand extends Command
         private readonly EntityManagerInterface $em,
         private readonly TournamentRepository $tournaments,
         private readonly TournamentSchedule $schedule,
+        private readonly NotificationService $notifications,
         private readonly ClockInterface $clock,
     ) {
         parent::__construct();
@@ -58,7 +60,10 @@ final class EnsureTournamentCommand extends Command
         $this->em->persist($tournament);
         $this->em->flush();
 
-        $io->success("Создан турнир #{$this->schedule->number($tournament)} на {$sunday->format('Y-m-d')}.");
+        // Авто-анонс: письма всем игрокам с email.
+        $sent = $this->notifications->announceRegistrationOpen($tournament);
+
+        $io->success("Создан турнир #{$this->schedule->number($tournament)} на {$sunday->format('Y-m-d')}. Разослано писем: {$sent}.");
 
         return Command::SUCCESS;
     }

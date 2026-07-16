@@ -38,6 +38,20 @@ final class UserRepository extends ServiceEntityRepository implements PasswordUp
     }
 
     /**
+     * Все игроки с указанным email (для рассылок).
+     *
+     * @return list<User>
+     */
+    public function findAllWithEmail(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.email IS NOT NULL')
+            ->andWhere("u.email != ''")
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Прозрачное обновление хеша пароля на новый алгоритм при входе.
      */
     public function upgradePassword(PasswordAuthenticatedUserInterface $user, string $newHashedPassword): void

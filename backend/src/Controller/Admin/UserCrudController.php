@@ -7,6 +7,8 @@ namespace App\Controller\Admin;
 use App\Entity\User;
 use App\Service\PhoneNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
@@ -40,6 +42,14 @@ final class UserCrudController extends AbstractCrudController
             ->setEntityLabelInSingular('Игрок')
             ->setEntityLabelInPlural('Игроки')
             ->setDefaultSort(['id' => 'DESC']);
+    }
+
+    public function configureActions(Actions $actions): Actions
+    {
+        return $actions
+            ->update(Crud::PAGE_INDEX, Action::NEW, static fn (Action $a) => $a->setLabel('Добавить игрока'))
+            ->update(Crud::PAGE_INDEX, Action::EDIT, static fn (Action $a) => $a->setLabel('Изменить'))
+            ->update(Crud::PAGE_INDEX, Action::DELETE, static fn (Action $a) => $a->setLabel('Удалить'));
     }
 
     public function configureFields(string $pageName): iterable
