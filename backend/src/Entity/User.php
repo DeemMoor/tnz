@@ -175,6 +175,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    /**
+     * Удобный флаг для админки: есть ли у игрока роль администратора.
+     */
+    public function isAdmin(): bool
+    {
+        return \in_array('ROLE_ADMIN', $this->roles, true);
+    }
+
+    /**
+     * Назначить/снять роль администратора (переключатель в админке).
+     */
+    public function setIsAdmin(bool $isAdmin): static
+    {
+        // В raw-roles храним только доп-роли (ROLE_USER добавляется в getRoles()).
+        $roles = array_values(array_filter($this->roles, static fn (string $r) => $r !== 'ROLE_ADMIN'));
+        if ($isAdmin) {
+            $roles[] = 'ROLE_ADMIN';
+        }
+        $this->roles = $roles;
+
+        return $this;
+    }
+
     public function getRttfRating(): ?int
     {
         return $this->rttfRating;

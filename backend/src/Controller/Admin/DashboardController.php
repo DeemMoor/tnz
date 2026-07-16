@@ -10,6 +10,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminDashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -19,9 +20,17 @@ use Symfony\Component\HttpFoundation\Response;
 #[AdminDashboard(routePath: '/admin', routeName: 'admin')]
 final class DashboardController extends AbstractDashboardController
 {
+    public function __construct(
+        private readonly AdminUrlGenerator $adminUrlGenerator,
+    ) {
+    }
+
     public function index(): Response
     {
-        return parent::index();
+        // Вместо дефолтной заглушки EasyAdmin — сразу список турниров.
+        return $this->redirect(
+            $this->adminUrlGenerator->setController(TournamentCrudController::class)->generateUrl(),
+        );
     }
 
     public function configureDashboard(): Dashboard

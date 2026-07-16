@@ -95,8 +95,9 @@ DATABASE_URL="mysql://<DB>:<ПАРОЛЬ>@localhost:3306/<DB>?serverVersion=8.0&
 MAILER_DSN="smtp://<ящик>%40<DOMAIN>:<пароль_ящика>@smtp.beget.com:465?encryption=ssl"
 MAILER_FROM="<ящик>@<DOMAIN>"
 
-# База для ссылок в письмах — адрес сайта (https).
-APP_PUBLIC_URL="https://<DOMAIN>"
+# База для ссылок в письмах — адрес сайта.
+# Технический домен BeGet — только http (без https).
+APP_PUBLIC_URL="http://<DOMAIN>"
 
 # Подмена времени — только для отладки. На проде оставить пустым!
 APP_FAKE_NOW=

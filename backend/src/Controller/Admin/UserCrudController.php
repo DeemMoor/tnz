@@ -42,11 +42,13 @@ final class UserCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         yield IdField::new('id')->hideOnForm();
-        yield TextField::new('name', 'Имя');
+        yield TextField::new('name', 'Фамилия и Имя');
         yield TextField::new('phone', 'Телефон');
         yield EmailField::new('email', 'Email');
         yield BooleanField::new('emailVerified', 'Email подтверждён')->renderAsSwitch(false);
         yield IntegerField::new('rttfRating', 'RTTF')->hideOnIndex();
         yield BooleanField::new('isChampion', 'Чемпион')->renderAsSwitch(false);
+        // Переключатель роли админа прямо в списке/карточке (можно тапнуть в таблице).
+        yield BooleanField::new('isAdmin', 'Админ');
     }
 }
