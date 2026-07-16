@@ -30,7 +30,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /** Хеш пароля (argon2id). Никогда не хранить/сравнивать открытый пароль. */
     #[ORM\Column]
-    private string $password;
+    private string $password = '';
 
     #[ORM\Column(length: 100)]
     private string $name;
@@ -74,6 +74,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
+
+    /**
+     * Пароль в открытом виде — только для формы админки (не хранится в БД).
+     * При сохранении хешируется в UserCrudController и сюда не попадает.
+     */
+    private ?string $plainPassword = null;
 
     public function __construct()
     {
@@ -281,6 +287,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getPlainPassword(): ?string
+    {
+        return $this->plainPassword;
+    }
+
+    public function setPlainPassword(?string $plainPassword): static
+    {
+        $this->plainPassword = $plainPassword;
+
+        return $this;
     }
 
     /**
