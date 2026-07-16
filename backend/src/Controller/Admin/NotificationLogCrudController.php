@@ -38,6 +38,7 @@ final class NotificationLogCrudController extends AbstractCrudController
         // Рассылки создаются системой, руками не редактируем — только смотрим.
         return $actions
             ->disable(Action::NEW, Action::EDIT, Action::DELETE)
+            ->add(Crud::PAGE_INDEX, Action::DETAIL)
             ->update(Crud::PAGE_INDEX, Action::DETAIL, static fn (Action $a) => $a->setLabel('Открыть'));
     }
 
