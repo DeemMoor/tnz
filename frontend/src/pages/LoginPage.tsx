@@ -1,11 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 // LoginPage — форма входа по телефону + паролю.
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login, user } = useAuth()
   const navigate = useNavigate()
+
+  // Уже вошёл — форма входа не нужна, отправляем на главную.
+  if (user) return <Navigate to="/" replace />
 
   // state — «память» компонента: значения полей и текст ошибки.
   const [phone, setPhone] = useState('')

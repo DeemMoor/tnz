@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 // Ответ бэка при ошибках валидации: { errors: { phone?: string, ... } }.
@@ -7,8 +7,11 @@ type RegisterErrors = Partial<Record<'phone' | 'password' | 'name', string>>
 
 // RegisterPage — регистрация игрока: телефон, имя, пароль.
 export default function RegisterPage() {
-  const { login } = useAuth()
+  const { login, user } = useAuth()
   const navigate = useNavigate()
+
+  // Уже вошёл — регистрация не нужна.
+  if (user) return <Navigate to="/" replace />
 
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
