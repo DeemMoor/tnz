@@ -341,7 +341,13 @@ button.small {
 .ht-date {
   color: var(--muted);
   font-size: 0.92rem;
-  text-transform: capitalize;
+  display: inline-block;
+}
+
+/* Только первая буква даты заглавная («Воскресенье, 19 июля 2026 г.»),
+   а не каждое слово (иначе получалось «Июля 2026 Г.»). */
+.ht-date::first-letter {
+  text-transform: uppercase;
 }
 
 .ht-counts {
@@ -406,7 +412,11 @@ button.small {
 .card .date {
   color: var(--muted);
   font-size: 0.88rem;
-  text-transform: capitalize;
+  display: inline-block;
+}
+
+.card .date::first-letter {
+  text-transform: uppercase;
 }
 
 .status-pill {
