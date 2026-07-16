@@ -6,6 +6,7 @@ import {
   getNearestTournament,
   registerForTournament,
   unregisterFromTournament,
+  checkInSelf,
 } from '../api/tournaments'
 
 function formatDate(ymd: string): string {
@@ -62,6 +63,16 @@ export default function HomePage() {
     setBusy(false)
   }
 
+  async function onCheckin() {
+    if (!t) return
+    setBusy(true)
+    setError(null)
+    const res = await checkInSelf(t.id)
+    if (res.ok && res.tournament) setT(res.tournament)
+    else setError(res.error ?? 'Не удалось отметиться')
+    setBusy(false)
+  }
+
   const me = t?.me
   const isActive = me?.status === 'registered' || me?.status === 'waitlisted'
   const hasBracket = t != null && ['drawn', 'in_progress', 'finished'].includes(t.status)
@@ -104,9 +115,17 @@ export default function HomePage() {
             <div className="badge badge-ok">
               {me.checkedIn ? 'Вы участвуете (отмечены)' : 'Вы записаны в турнир'}
             </div>
-            <button type="button" className="secondary" onClick={onUnregister} disabled={busy}>
-              Снять с регистрации
-            </button>
+            {/* В окно чекина (вс 14:00–14:15) — кнопка отметиться. */}
+            {!me.checkedIn && t.checkinOpen && (
+              <button type="button" className="btn-lg" onClick={onCheckin} disabled={busy}>
+                Я на месте — отметиться
+              </button>
+            )}
+            {!me.checkedIn && (
+              <button type="button" className="secondary" onClick={onUnregister} disabled={busy}>
+                Снять с регистрации
+              </button>
+            )}
           </>
         )}
         {user && me?.status === 'waitlisted' && (
