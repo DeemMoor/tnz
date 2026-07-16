@@ -20,8 +20,10 @@ export default defineConfig({
       },
     },
   },
-  // Прод-сборка кладётся в public/ Symfony (см. деплой). Базовый путь — корень.
+  // Прод-сборка кладётся прямо в public/ Symfony (docroot на BeGet).
   build: {
-    outDir: 'dist',
+    outDir: '../backend/public',
+    // emptyOutDir: false — НЕ стирать public (там index.php, .htaccess, bundles/).
+    emptyOutDir: false,
   },
 })

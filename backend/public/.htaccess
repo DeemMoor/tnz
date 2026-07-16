@@ -1,0 +1,26 @@
+# Конфиг для BeGet (Apache). Локально используется nginx — он этот файл игнорирует.
+# На BeGet к этому файлу панель может добавлять свои блоки (выбор версии PHP,
+# SSL-редирект) — их не трогаем, наши правила ниже с ними сосуществуют.
+
+# docroot назначен симлинком на app/backend/public — разрешаем переход по симлинкам.
+Options +FollowSymLinks
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Существующие файлы (index.html, assets/, favicon.svg …) отдаём напрямую.
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Всё остальное — на единственную точку входа Symfony.
+    # Дальше роутинг решит: API, админка или отдать index.html (React SPA).
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# PHP-лимиты, если PHP подключён как модуль Apache (mod_php).
+# Если на BeGet PHP-FPM — лимиты задаёт .user.ini рядом (и/или панель).
+<IfModule mod_php.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 20M
+    php_value memory_limit 256M
+</IfModule>
