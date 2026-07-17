@@ -112,7 +112,7 @@ export default function TournamentCard({ tournament }: { tournament: Tournament 
 
       {canCheckIn && (
         <button type="button" onClick={onCheckin} disabled={busy}>
-          Я на месте — отметиться
+          Я на месте
         </button>
       )}
 

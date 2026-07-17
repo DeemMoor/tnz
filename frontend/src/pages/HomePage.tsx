@@ -118,7 +118,7 @@ export default function HomePage() {
             {/* В окно чекина (вс 14:00–14:15) — кнопка отметиться. */}
             {!me.checkedIn && t.checkinOpen && (
               <button type="button" className="btn-lg" onClick={onCheckin} disabled={busy}>
-                Я на месте — отметиться
+                Я на месте
               </button>
             )}
             {!me.checkedIn && (
