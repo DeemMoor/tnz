@@ -14,6 +14,8 @@
 /backend/public/favicon.svg
 /backend/public/icons.svg
 /backend/public/vite.svg
+/backend/public/robots.txt
+/backend/public/sitemap.xml
 
 # Загруженные аватарки (пользовательские данные, не в git)
 /backend/public/uploads/

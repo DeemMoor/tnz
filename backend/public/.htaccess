@@ -8,6 +8,11 @@ Options +FollowSymLinks
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Технический домен → постоянный редирект на основной (tnnz.ru).
+    # Условие по хосту, чтобы сам tnnz.ru не редиректился.
+    RewriteCond %{HTTP_HOST} ^tnz\.deemmoor\.beget\.tech$ [NC]
+    RewriteRule ^ https://tnnz.ru%{REQUEST_URI} [L,R=301]
+
     # Существующие файлы (index.html, assets/, favicon.svg …) отдаём напрямую.
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
