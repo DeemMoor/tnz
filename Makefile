@@ -40,4 +40,4 @@ deploy:        ## Деплой на BeGet: тесты -> git push -> серве�
 	@echo ">> 2/3 git push"
 	git push origin master
 	@echo ">> 3/3 деплой на сервере"
-	ssh deemmoor 'cd ~/tnz.deemmoor.beget.tech/app && git pull && bash scripts/deploy-remote.sh'
+	ssh deemmoor 'cd ~/tnnz.ru/app && git pull && bash scripts/deploy-remote.sh'
