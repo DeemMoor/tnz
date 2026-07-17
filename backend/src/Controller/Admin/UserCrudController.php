@@ -25,6 +25,9 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -121,6 +124,16 @@ final class UserCrudController extends AbstractCrudController
         yield BooleanField::new('isAdmin', 'Админ');
     }
 
+    public function createNewFormBuilder($entityDto, $formOptions, $context): FormBuilderInterface
+    {
+        return $this->withPhoneNormalization(parent::createNewFormBuilder($entityDto, $formOptions, $context));
+    }
+
+    public function createEditFormBuilder($entityDto, $formOptions, $context): FormBuilderInterface
+    {
+        return $this->withPhoneNormalization(parent::createEditFormBuilder($entityDto, $formOptions, $context));
+    }
+
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         if ($entityInstance instanceof User) {
@@ -135,6 +148,26 @@ final class UserCrudController extends AbstractCrudController
             $this->applyPhoneAndPassword($entityInstance);
         }
         parent::updateEntity($entityManager, $entityInstance);
+    }
+
+    /**
+     * Нормализуем телефон ДО валидации (иначе UniqueEntity сравнит сырой ввод
+     * с нормализованными номерами в БД и пропустит дубль → 500 при сохранении).
+     */
+    private function withPhoneNormalization(FormBuilderInterface $builder): FormBuilderInterface
+    {
+        $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event): void {
+            $data = $event->getData();
+            if (\is_array($data) && \is_string($data['phone'] ?? null)) {
+                $normalized = $this->phoneNormalizer->normalize($data['phone']);
+                if ($normalized !== null) {
+                    $data['phone'] = $normalized;
+                    $event->setData($data);
+                }
+            }
+        });
+
+        return $builder;
     }
 
     /**

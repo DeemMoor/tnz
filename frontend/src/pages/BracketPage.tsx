@@ -129,8 +129,16 @@ export default function BracketPage() {
   function PlayerRow({ m, player }: { m: BracketMatch; player: BracketPlayer }) {
     const isWinner = player != null && m.winnerId === player.id
     const clickable = canScore(m) && player != null
-    const cls = ['prow', isWinner ? 'won' : '', clickable ? 'pickable' : ''].join(' ').trim()
-    const label = player ? player.name : m.status === 'pending' ? '—' : 'bye'
+    // Пустой слот: если матч сыгран как автопроход — «нет соперника», иначе ждём соперника.
+    const empty = player == null
+    const label = player
+      ? player.name
+      : m.status === 'done'
+        ? 'нет соперника'
+        : 'ждём соперника'
+    const cls = ['prow', isWinner ? 'won' : '', clickable ? 'pickable' : '', empty ? 'empty' : '']
+      .join(' ')
+      .trim()
 
     if (clickable) {
       return (

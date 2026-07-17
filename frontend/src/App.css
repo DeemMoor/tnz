@@ -827,6 +827,13 @@ ol.roster {
   font-weight: 700;
 }
 
+/* Пустой слот (автопроход/ждём соперника) — серым, чтобы не путать с игроком. */
+.prow.empty {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.82rem;
+}
+
 .prow.pickable {
   cursor: pointer;
 }

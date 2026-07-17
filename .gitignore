@@ -23,3 +23,6 @@
 *.log
 .idea/*
 !.idea/
+
+# корневой node_modules (случайные установки)
+/node_modules/
