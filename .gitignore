@@ -28,3 +28,4 @@
 
 # корневой node_modules (случайные установки)
 /node_modules/
+/backend/public/og-image.jpg
