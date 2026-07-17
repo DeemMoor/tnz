@@ -60,15 +60,18 @@ final class PlayerHistoryService
                 // Стадия: самый дальний тур, где игрок вообще присутствовал (в т.ч. bye).
                 $maxRoundReached = max($maxRoundReached, $m->getRound());
 
-                // Победы/поражения считаем только по реально сыгранным матчам.
                 if ($m->getStatus() === MatchStatus::Done && $m->getPlayer1() !== null && $m->getPlayer2() !== null) {
-                    if ($m->getWinner() === $user) {
-                        $wins++;
-                        if ($m->getRound() === $rMax) {
-                            $wonFinal = true;
+                    // Победа в финале = чемпион стола (даже если технически, по неявке).
+                    if ($m->getWinner() === $user && $m->getRound() === $rMax) {
+                        $wonFinal = true;
+                    }
+                    // В W/L считаем только реально сыгранные матчи (без техпобед).
+                    if (!$m->isWalkover()) {
+                        if ($m->getWinner() === $user) {
+                            $wins++;
+                        } else {
+                            $losses++;
                         }
-                    } else {
-                        $losses++;
                     }
                 }
             }

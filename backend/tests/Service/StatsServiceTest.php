@@ -103,4 +103,44 @@ final class StatsServiceTest extends KernelTestCase
         $totalWins = array_sum(array_column($board, 'wins'));
         self::assertSame(5, $totalWins, 'Байи (автопроходы) не считаются победами');
     }
+
+    public function testWalkoverNotCountedInStats(): void
+    {
+        $t = new \App\Entity\Tournament();
+        $t->setName('WO');
+        $t->setDate(new \DateTimeImmutable('2026-07-19'));
+        $t->setStatus(\App\Enum\TournamentStatus::Checkin);
+        $this->em->persist($t);
+        $this->em->flush();
+
+        for ($i = 1; $i <= 4; $i++) {
+            $u = new \App\Entity\User();
+            $u->setPhone('7955' . str_pad((string) $i, 7, '0', \STR_PAD_LEFT));
+            $u->setName('W' . $i);
+            $u->setPassword('hash');
+            $this->em->persist($u);
+            $this->em->flush();
+            $this->registration->register($t, $u, ignoreSchedule: true);
+        }
+        $this->draw->draw($t);
+
+        // Один полуфинал играем как техпобеду, остальное — обычно.
+        $matches = $this->matches->findByTournamentOrdered($t);
+        $first = true;
+        do {
+            $progressed = false;
+            foreach ($this->matches->findByTournamentOrdered($t) as $m) {
+                if ($m->getStatus() === \App\Enum\MatchStatus::Pending && $m->isReady()) {
+                    $this->advance->recordWinner($m, $m->getPlayer1(), byAdmin: true, walkover: $first);
+                    $first = false;
+                    $progressed = true;
+                }
+            }
+        } while ($progressed);
+
+        // Всего сыграно 3 матча, один — техпобеда → в статистике 2 победы.
+        $totalWins = array_sum(array_column($this->stats->leaderboard(), 'wins'));
+        self::assertSame(2, $totalWins, 'Техпобеда (неявка) не идёт в статистику');
+        unset($matches);
+    }
 }

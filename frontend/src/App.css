@@ -835,6 +835,32 @@ ol.roster {
   background: var(--accent-soft);
 }
 
+/* Тумблер режима неявки. */
+.walkover-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.walkover-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.walkover-toggle.on {
+  border-color: #a86a00;
+  background: rgba(200, 140, 0, 0.1);
+  color: #a86a00;
+  font-weight: 600;
+}
+
 /* ==========================================================================
    Статистика
    ========================================================================== */

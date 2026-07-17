@@ -30,14 +30,14 @@ final class AdvanceService
      *
      * @throws RegistrationException
      */
-    public function recordWinner(BracketMatch $match, User $winner, bool $byAdmin): void
+    public function recordWinner(BracketMatch $match, User $winner, bool $byAdmin, bool $walkover = false): void
     {
         if ($winner !== $match->getPlayer1() && $winner !== $match->getPlayer2()) {
             throw new RegistrationException('Победитель должен быть участником матча', 422);
         }
 
         if ($match->getStatus() === MatchStatus::Done) {
-            if ($match->getWinner() === $winner) {
+            if ($match->getWinner() === $winner && $match->isWalkover() === $walkover) {
                 return; // тот же результат — идемпотентно
             }
             if (!$byAdmin) {
@@ -47,7 +47,7 @@ final class AdvanceService
             $this->rollbackWinner($match);
         }
 
-        $match->setWinner($winner);
+        $match->setWinner($winner, $walkover);
 
         $tournament = $match->getTournament();
         if ($tournament->getStatus() === TournamentStatus::Drawn) {

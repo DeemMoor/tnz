@@ -42,6 +42,7 @@ final class MatchController extends AbstractController
         /** @var array<string, mixed> $data */
         $data = json_decode($request->getContent(), true) ?? [];
         $winnerId = \is_int($data['winnerId'] ?? null) ? $data['winnerId'] : null;
+        $walkover = ($data['walkover'] ?? false) === true;
 
         // Победитель — один из двух игроков матча.
         $winner = null;
@@ -55,7 +56,7 @@ final class MatchController extends AbstractController
         }
 
         try {
-            $advance->recordWinner($match, $winner, byAdmin: $isAdmin);
+            $advance->recordWinner($match, $winner, byAdmin: $isAdmin, walkover: $walkover);
         } catch (RegistrationException $e) {
             return $this->json(['error' => $e->getMessage()], $e->statusCode);
         }
@@ -65,6 +66,7 @@ final class MatchController extends AbstractController
                 'id' => $match->getId(),
                 'winnerId' => $match->getWinner()?->getId(),
                 'status' => $match->getStatus()->value,
+                'walkover' => $match->isWalkover(),
             ],
             'tournamentStatus' => $match->getTournament()->getStatus()->value,
         ]);

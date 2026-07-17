@@ -34,6 +34,7 @@ final class BracketMatchRepository extends ServiceEntityRepository
             ->andWhere('m.status = :done')
             ->andWhere('m.player1 IS NOT NULL')
             ->andWhere('m.player2 IS NOT NULL')
+            ->andWhere('m.walkover = false') // техпобеды в статистику не идут
             ->setParameter('done', MatchStatus::Done)
             ->getQuery()
             ->getResult();

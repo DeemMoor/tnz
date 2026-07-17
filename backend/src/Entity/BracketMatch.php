@@ -55,6 +55,10 @@ class BracketMatch
     #[ORM\Column(length: 10, enumType: MatchStatus::class)]
     private MatchStatus $status = MatchStatus::Pending;
 
+    /** Техническая победа (соперник не явился): в статистику не идёт. */
+    #[ORM\Column]
+    private bool $walkover = false;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $playedAt = null;
 
@@ -127,10 +131,12 @@ class BracketMatch
 
     /**
      * Записать победителя и пометить матч сыгранным.
+     * $walkover = техпобеда (соперник не явился) — в статистику не попадёт.
      */
-    public function setWinner(?User $winner): static
+    public function setWinner(?User $winner, bool $walkover = false): static
     {
         $this->winner = $winner;
+        $this->walkover = $winner !== null && $walkover;
         if ($winner !== null) {
             $this->status = MatchStatus::Done;
             $this->playedAt = new \DateTimeImmutable();
@@ -140,6 +146,11 @@ class BracketMatch
         }
 
         return $this;
+    }
+
+    public function isWalkover(): bool
+    {
+        return $this->walkover;
     }
 
     public function getPlayedAt(): ?\DateTimeImmutable

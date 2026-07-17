@@ -96,6 +96,9 @@ export default function BracketPage() {
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN') ?? false
 
+  // Режим неявки: тап по пришедшему = техпобеда (соперник не пришёл), без статы.
+  const [walkoverMode, setWalkoverMode] = useState(false)
+
   // Кто может отметить этот матч: админ или один из двух игроков; матч готов и не сыгран.
   function canScore(m: BracketMatch): boolean {
     if (m.status !== 'pending' || !m.player1 || !m.player2) return false
@@ -105,9 +108,10 @@ export default function BracketPage() {
 
   async function onPick(m: BracketMatch, player: BracketPlayer) {
     if (!player || !canScore(m)) return
+    if (walkoverMode && !confirm(`Засчитать неявку: ${player.name} проходит дальше без игры?`)) return
     setBusy(true)
     setError(null)
-    const res = await markWinner(m.id, player.id)
+    const res = await markWinner(m.id, player.id, walkoverMode)
     if (!res.ok) setError(res.error ?? 'Ошибка')
     load() // перечитать сетку (продвижение победителя)
     setBusy(false)
@@ -152,6 +156,18 @@ export default function BracketPage() {
           <p className="muted">{formatDate(bracket.tournament.date)}</p>
           {user == null && (
             <p className="hint">Войдите, чтобы отмечать результаты своих матчей.</p>
+          )}
+
+          {/* Режим неявки: тап отмечает техпобеду (соперник не пришёл). */}
+          {user != null && bracket.tournament.status !== 'finished' && (
+            <label className={`walkover-toggle${walkoverMode ? ' on' : ''}`}>
+              <input
+                type="checkbox"
+                checked={walkoverMode}
+                onChange={(e) => setWalkoverMode(e.target.checked)}
+              />
+              Режим неявки: тапни того, кто пришёл — он проходит без игры (не в статистику)
+            </label>
           )}
 
           {bracket.tables.length === 0 && (
