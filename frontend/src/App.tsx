@@ -12,14 +12,16 @@ import ContactsPage from './pages/ContactsPage'
 import StatsPage from './pages/StatsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Header from './components/Header'
+import Footer from './components/Footer'
 import './App.css'
 
-// App — «корневой» компонент. Шапка сверху (общая навигация) + роутинг.
-// /profile обёрнут в ProtectedRoute — доступен только залогиненным.
+// App — «корневой» компонент. Шапка сверху + роутинг + подвал.
+// Обёртка .app-shell прижимает футер к низу на коротких страницах.
 function App() {
   return (
-    <>
+    <div className="app-shell">
       <Header />
+      <div className="app-main">
       <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/tournaments" element={<TournamentsPage />} />
@@ -40,7 +42,9 @@ function App() {
         }
       />
       </Routes>
-    </>
+      </div>
+      <Footer />
+    </div>
   )
 }
 

@@ -2,6 +2,27 @@
    Общий макет и компоненты. Mobile-first; десктоп расширяется в @media внизу.
    ========================================================================== */
 
+/* Прижимаем футер к низу на коротких страницах. */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+}
+
+/* --- Подвал --- */
+.app-footer {
+  background: #e5e7eb;
+  color: #8b929c;
+  text-align: center;
+  padding: 18px 16px;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+}
+
 /* --- Шапка --- */
 .app-header {
   position: sticky;
