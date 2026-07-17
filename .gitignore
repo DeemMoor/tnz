@@ -16,6 +16,10 @@
 /backend/public/vite.svg
 /backend/public/robots.txt
 /backend/public/sitemap.xml
+/backend/public/favicon.ico
+/backend/public/favicon-32.png
+/backend/public/favicon-192.png
+/backend/public/apple-touch-icon.png
 
 # Загруженные аватарки (пользовательские данные, не в git)
 /backend/public/uploads/
