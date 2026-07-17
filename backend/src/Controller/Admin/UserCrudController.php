@@ -19,6 +19,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\EmailField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
@@ -122,6 +123,7 @@ final class UserCrudController extends AbstractCrudController
         yield IntegerField::new('rttfRating', 'RTTF')->hideOnIndex();
         yield BooleanField::new('isChampion', 'Чемпион')->renderAsSwitch(false);
         yield BooleanField::new('isAdmin', 'Админ');
+        yield DateTimeField::new('createdAt', 'Регистрация')->setFormat('dd.MM.yyyy HH:mm')->hideOnForm();
     }
 
     public function createNewFormBuilder($entityDto, $formOptions, $context): FormBuilderInterface
