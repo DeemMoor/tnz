@@ -33,3 +33,4 @@
 # корневой node_modules (случайные установки)
 /node_modules/
 /backend/public/og-cover.jpg
+/backend/public/img/

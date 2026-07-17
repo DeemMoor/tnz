@@ -1,4 +1,4 @@
-export type StackItem = { name: string; link: string; version: string }
+export type StackItem = { name: string; logo: string; link: string; version: string }
 export type StackGroup = { title: string; items: StackItem[] }
 
 export async function getStack(): Promise<StackGroup[]> {

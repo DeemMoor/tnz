@@ -1,5 +1,27 @@
 import { useEffect, useState } from 'react'
-import { getStack, type StackGroup } from '../api/stack'
+import { getStack, type StackGroup, type StackItem } from '../api/stack'
+
+// Логотип технологии: картинка из /img/stack, при ошибке — буква-бейдж.
+function TechLogo({ tech }: { tech: StackItem }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <span className="stack-logo-letter" aria-hidden="true">
+        {tech.name.charAt(0)}
+      </span>
+    )
+  }
+  return (
+    <img
+      className="stack-logo"
+      src={`/img/stack/${tech.logo}.svg`}
+      alt=""
+      width={30}
+      height={30}
+      onError={() => setFailed(true)}
+    />
+  )
+}
 
 // StackPage — «секретная» страница со стеком проекта. Не в меню, только по /stack.
 // Версии подтягиваются с бэка (реальные, не захардкожены).
@@ -33,8 +55,11 @@ export default function StackPage() {
                 target="_blank"
                 rel="noreferrer"
               >
-                <span className="stack-name">{tech.name}</span>
-                <span className="stack-version">{tech.version}</span>
+                <TechLogo tech={tech} />
+                <span className="stack-meta">
+                  <span className="stack-name">{tech.name}</span>
+                  <span className="stack-version">{tech.version}</span>
+                </span>
               </a>
             ))}
           </div>

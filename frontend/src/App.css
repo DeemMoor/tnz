@@ -16,8 +16,8 @@
 
 .stack-card {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 12px;
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -29,6 +29,31 @@
 
 .stack-card:hover {
   border-color: var(--accent);
+}
+
+.stack-logo {
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+/* Фолбэк-бейдж (буква) для технологий без картинки-логотипа. */
+.stack-logo-letter {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stack-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .stack-name {

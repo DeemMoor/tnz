@@ -28,20 +28,20 @@ final class StackController extends AbstractController
                 [
                     'title' => 'Frontend',
                     'items' => [
-                        $this->item('React', 'https://react.dev', $npm['react'] ?? null),
-                        $this->item('TypeScript', 'https://www.typescriptlang.org', $npm['typescript'] ?? null),
-                        $this->item('Vite', 'https://vite.dev', $npm['vite'] ?? null),
-                        $this->item('React Router', 'https://reactrouter.com', $npm['react-router-dom'] ?? null),
+                        $this->item('React', 'react', 'https://react.dev', $npm['react'] ?? null),
+                        $this->item('TypeScript', 'typescript', 'https://www.typescriptlang.org', $npm['typescript'] ?? null),
+                        $this->item('Vite', 'vite', 'https://vite.dev', $npm['vite'] ?? null),
+                        $this->item('React Router', 'react', 'https://reactrouter.com', $npm['react-router-dom'] ?? null),
                     ],
                 ],
                 [
                     'title' => 'Backend',
                     'items' => [
-                        $this->item('PHP', 'https://www.php.net', PHP_VERSION),
-                        $this->item('Symfony', 'https://symfony.com', Kernel::VERSION),
-                        $this->item('Doctrine ORM', 'https://www.doctrine-project.org', $composer['doctrine/orm'] ?? null),
-                        $this->item('EasyAdmin', 'https://github.com/EasyCorp/EasyAdminBundle', $composer['easycorp/easyadmin-bundle'] ?? null),
-                        $this->item('MySQL', 'https://www.mysql.com', $this->mysqlVersion($connection)),
+                        $this->item('PHP', 'php', 'https://www.php.net', PHP_VERSION),
+                        $this->item('Symfony', 'symfony', 'https://symfony.com', Kernel::VERSION),
+                        $this->item('Doctrine ORM', 'doctrine', 'https://www.doctrine-project.org', $composer['doctrine/orm'] ?? null),
+                        $this->item('EasyAdmin', 'easyadmin', 'https://github.com/EasyCorp/EasyAdminBundle', $composer['easycorp/easyadmin-bundle'] ?? null),
+                        $this->item('MySQL', 'mysql', 'https://www.mysql.com', $this->mysqlVersion($connection)),
                     ],
                 ],
             ],
@@ -49,12 +49,13 @@ final class StackController extends AbstractController
     }
 
     /**
-     * @return array{name: string, link: string, version: string}
+     * @return array{name: string, logo: string, link: string, version: string}
      */
-    private function item(string $name, string $link, ?string $version): array
+    private function item(string $name, string $logo, string $link, ?string $version): array
     {
         return [
             'name' => $name,
+            'logo' => $logo,
             'link' => $link,
             'version' => $version ?? '—',
         ];
