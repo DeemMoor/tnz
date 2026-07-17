@@ -1,0 +1,63 @@
+{#
+  Кастомная страница ошибок (401/403/404/500…) в стиле сайта.
+  Показывается только в prod (в dev — отладочная страница Symfony).
+  Самодостаточный HTML с инлайн-стилями (сборка фронта тут недоступна).
+#}
+{% set messages = {
+    401: {'title': 'Нужно войти', 'text': 'Сессия истекла или вы не авторизованы. Войдите, чтобы продолжить.'},
+    403: {'title': 'Нет доступа', 'text': 'У вас нет прав для этой страницы.'},
+    404: {'title': 'Страница не найдена', 'text': 'Такой страницы нет или она переехала.'},
+    500: {'title': 'Что-то сломалось', 'text': 'На сервере произошла ошибка. Мы уже разбираемся.'}
+} %}
+{% set info = messages[status_code] | default({'title': 'Ошибка', 'text': 'Произошла ошибка при обработке запроса.'}) %}
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ status_code }} — {{ info.title }} · Теннис на Новой Земле</title>
+    <style>
+        :root { --accent:#1f7a3d; --accent-dark:#166030; --text:#1a1c22; --muted:#6b7280; --bg:#f4f5f7; --border:#e5e7eb; }
+        * { box-sizing:border-box; }
+        body { margin:0; font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text);
+               min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+        .card { background:#fff; border:1px solid var(--border); border-radius:18px; box-shadow:0 4px 24px rgba(16,24,40,.08);
+                max-width:440px; width:100%; padding:36px 28px; text-align:center; }
+        .racket { width:72px; height:72px; margin:0 auto 8px; display:block; }
+        .code { font-size:3.4rem; font-weight:800; color:var(--accent); line-height:1; margin:6px 0; letter-spacing:-.02em; }
+        h1 { font-size:1.4rem; margin:4px 0 8px; }
+        p { color:var(--muted); margin:0 0 22px; line-height:1.5; }
+        .actions { display:flex; flex-direction:column; gap:10px; }
+        .btn { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:12px 20px;
+               font-size:1rem; font-weight:600; border-radius:10px; text-decoration:none; }
+        .btn-primary { background:var(--accent); color:#fff; }
+        .btn-primary:hover { background:var(--accent-dark); }
+        .btn-outline { background:#fff; color:var(--accent); border:1px solid var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <svg class="racket" viewBox="0 0 64 64" aria-hidden="true">
+            <g transform="rotate(-38 32 34)">
+                <rect x="27.5" y="36" width="9" height="24" rx="4.5" fill="#9a6b3f"/>
+                <circle cx="32" cy="24" r="19" fill="#1f7a3d"/>
+                <circle cx="32" cy="24" r="19" fill="none" stroke="#12522a" stroke-width="2.5"/>
+                <ellipse cx="25" cy="17" rx="6" ry="4" fill="#fff" opacity="0.18"/>
+            </g>
+            <circle cx="49" cy="13" r="7" fill="#f6a609"/>
+            <circle cx="49" cy="13" r="7" fill="none" stroke="#fff" stroke-width="2"/>
+        </svg>
+        <div class="code">{{ status_code }}</div>
+        <h1>{{ info.title }}</h1>
+        <p>{{ info.text }}</p>
+        <div class="actions">
+            {% if status_code in [401, 403] %}
+                <a class="btn btn-primary" href="/login">Войти</a>
+                <a class="btn btn-outline" href="/">На главную</a>
+            {% else %}
+                <a class="btn btn-primary" href="/">На главную</a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
