@@ -22,6 +22,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\EmailField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\ImageField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
@@ -108,6 +109,10 @@ final class UserCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         yield IdField::new('id')->hideOnForm();
+        // Аватар — только для показа в списке/карточке (загрузка через сайт).
+        yield ImageField::new('avatarPath', 'Фото')
+            ->setBasePath('/uploads/avatars')
+            ->onlyOnIndex();
         yield TextField::new('name', 'Фамилия и Имя');
         yield TextField::new('nickname', 'Ник');
         yield TextField::new('phone', 'Телефон');
