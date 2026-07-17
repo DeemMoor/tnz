@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api
+Disallow: /stack
 
 Sitemap: https://tnnz.ru/sitemap.xml
 Host: https://tnnz.ru

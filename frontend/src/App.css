@@ -2,6 +2,52 @@
    Общий макет и компоненты. Mobile-first; десктоп расширяется в @media внизу.
    ========================================================================== */
 
+/* --- Секретная страница Tech Stack --- */
+.stack-group {
+  margin-top: 24px;
+}
+
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.stack-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  text-decoration: none;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s ease;
+}
+
+.stack-card:hover {
+  border-color: var(--accent);
+}
+
+.stack-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stack-version {
+  font-size: 0.9rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.stack-credit {
+  margin-top: 32px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 /* Прижимаем футер к низу на коротких страницах. */
 .app-shell {
   display: flex;
