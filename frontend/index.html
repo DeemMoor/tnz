@@ -40,9 +40,39 @@
 
     <!-- Яндекс: разрешаем индексацию, регион можно уточнить в Вебмастере -->
     <meta name="yandex-verification" content="" />
+
+    <!-- Schema.org: организация/турниры (для Яндекса и Google) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SportsOrganization",
+        "name": "Теннис на Новой Земле",
+        "alternateName": "ТННЗ",
+        "url": "https://tnnz.ru/",
+        "logo": "https://tnnz.ru/favicon.svg",
+        "image": "https://tnnz.ru/og-cover.jpg",
+        "description": "Еженедельные любительские турниры по настольному теннису от Surf Coffee x Atlas и кластера «Новая Земля».",
+        "sport": "Настольный теннис",
+        "areaServed": { "@type": "City", "name": "Ростов-на-Дону" },
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Ростов-на-Дону",
+          "addressCountry": "RU"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Фолбэк для роботов без JS: базовая инфа всегда в сыром HTML. -->
+    <noscript>
+      <h1>Теннис на Новой Земле — турниры по настольному теннису</h1>
+      <p>
+        Еженедельные любительские турниры по настольному теннису от Surf Coffee x
+        Atlas и кластера «Новая Земля». Город: Ростов-на-Дону. Регистрация онлайн,
+        живая турнирная сетка, статистика игроков и чемпионы.
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
