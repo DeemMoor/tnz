@@ -16,8 +16,8 @@ export default function ContactsPage() {
 
         <h2>Где проходят</h2>
         <p>
-          Город: <strong>Ростов-на-Дону</strong>. Площадка кластера «Новая Земля»
-          (адрес уточняется).
+          <strong>Ростов-на-Дону</strong>, городское пространство кластера
+          «Новая Земля», <strong>ул. Седова, 5</strong>.
         </p>
 
         <h2>Как это работает</h2>
@@ -40,7 +40,12 @@ export default function ContactsPage() {
             <Link to="/champions">Чемпионы</Link> ·{' '}
             <Link to="/stats">Статистика игроков</Link>
           </li>
-          <li>Телеграм-сообщество: (ссылка уточняется)</li>
+          <li>
+            Телеграм-сообщество:{' '}
+            <a href="https://t.me/+pW47cgFhCFQ2YTMy" target="_blank" rel="noreferrer">
+              Теннис на Новой Земле
+            </a>
+          </li>
         </ul>
       </section>
     </main>
