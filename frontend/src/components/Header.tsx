@@ -17,6 +17,7 @@ export default function Header() {
           <NavLink to="/tournaments">Турниры</NavLink>
           <NavLink to="/champions">Чемпионы</NavLink>
           <NavLink to="/stats">Статистика</NavLink>
+          <NavLink to="/contacts">Контакты</NavLink>
           {user ? (
             <NavLink to="/profile" className="nav-profile">
               <Avatar name={user.displayName} url={user.avatarUrl} size={26} />
