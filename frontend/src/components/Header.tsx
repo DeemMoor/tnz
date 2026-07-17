@@ -15,6 +15,7 @@ export default function Header() {
         </Link>
         <nav className="nav">
           <NavLink to="/tournaments">Турниры</NavLink>
+          <NavLink to="/champions">Чемпионы</NavLink>
           <NavLink to="/stats">Статистика</NavLink>
           {user ? (
             <NavLink to="/profile" className="nav-profile">

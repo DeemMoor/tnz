@@ -906,6 +906,51 @@ ol.roster {
   gap: 10px;
 }
 
+/* Страница чемпионов. */
+.champ-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.champ-title {
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.champ-date {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.champ-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.champ-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.champ-cup {
+  font-size: 1.2rem;
+}
+
+.champ-name {
+  flex: 1;
+  font-weight: 700;
+}
+
+.champ-table {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 /* Публичный список участников. */
 .players-list {
   list-style: none;

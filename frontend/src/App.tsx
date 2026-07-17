@@ -7,6 +7,7 @@ import TournamentsPage from './pages/TournamentsPage'
 import CheckinPage from './pages/CheckinPage'
 import BracketPage from './pages/BracketPage'
 import ParticipantsPage from './pages/ParticipantsPage'
+import ChampionsPage from './pages/ChampionsPage'
 import StatsPage from './pages/StatsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Header from './components/Header'
@@ -25,6 +26,7 @@ function App() {
       <Route path="/tournaments/:id/bracket" element={<BracketPage />} />
       <Route path="/tournaments/:id/participants" element={<ParticipantsPage />} />
       <Route path="/stats" element={<StatsPage />} />
+      <Route path="/champions" element={<ChampionsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route

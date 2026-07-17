@@ -43,4 +43,19 @@ final class TournamentRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Завершённые турниры, новые сверху (для страницы чемпионов).
+     *
+     * @return list<Tournament>
+     */
+    public function findFinishedOrderedByDateDesc(): array
+    {
+        return $this->createQueryBuilder('t')
+            ->andWhere('t.status = :finished')
+            ->setParameter('finished', TournamentStatus::Finished)
+            ->orderBy('t.date', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }
