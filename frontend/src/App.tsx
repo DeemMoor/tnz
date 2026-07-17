@@ -13,6 +13,7 @@ import StatsPage from './pages/StatsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Header from './components/Header'
 import Footer from './components/Footer'
+import MetrikaTracker from './components/MetrikaTracker'
 import './App.css'
 
 // App — «корневой» компонент. Шапка сверху + роутинг + подвал.
@@ -20,6 +21,7 @@ import './App.css'
 function App() {
   return (
     <div className="app-shell">
+      <MetrikaTracker />
       <Header />
       <div className="app-main">
       <Routes>
