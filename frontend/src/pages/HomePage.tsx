@@ -101,7 +101,7 @@ export default function HomePage() {
         {!user && (
           <>
             <Link className="btn btn-lg" to="/register">
-              Зарегистрироваться и участвовать
+              Зарегистрироваться
             </Link>
             <div className="hero-auth">
               Уже есть аккаунт? <Link to="/login">Войти</Link>
