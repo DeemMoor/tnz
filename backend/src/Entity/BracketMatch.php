@@ -41,15 +41,15 @@ class BracketMatch
     private int $slot;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: true)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $player1 = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: true)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $player2 = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: true)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $winner = null;
 
     #[ORM\Column(length: 10, enumType: MatchStatus::class)]

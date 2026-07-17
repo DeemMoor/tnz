@@ -27,7 +27,7 @@ class TournamentEntry
     private Tournament $tournament;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
     #[ORM\Column(length: 20, enumType: EntryStatus::class)]
