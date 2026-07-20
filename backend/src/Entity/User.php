@@ -59,6 +59,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 64, nullable: true)]
     private ?string $emailVerificationToken = null;
 
+    /** Токен для сброса пароля по ссылке из письма. */
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $resetPasswordToken = null;
+
+    /** Токен сброса пароля действует ограниченное время. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $resetPasswordTokenExpiresAt = null;
+
     /** @var list<string> */
     #[ORM\Column]
     private array $roles = [];
@@ -213,6 +221,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setEmailVerificationToken(?string $token): static
     {
         $this->emailVerificationToken = $token;
+
+        return $this;
+    }
+
+    public function getResetPasswordToken(): ?string
+    {
+        return $this->resetPasswordToken;
+    }
+
+    public function setResetPasswordToken(?string $token): static
+    {
+        $this->resetPasswordToken = $token;
+
+        return $this;
+    }
+
+    public function getResetPasswordTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->resetPasswordTokenExpiresAt;
+    }
+
+    public function setResetPasswordTokenExpiresAt(?\DateTimeImmutable $expiresAt): static
+    {
+        $this->resetPasswordTokenExpiresAt = $expiresAt;
 
         return $this;
     }

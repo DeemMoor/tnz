@@ -63,6 +63,9 @@ export default function LoginPage() {
         </button>
       </form>
       <p className="muted">
+        <Link to="/forgot-password">Забыли пароль?</Link>
+      </p>
+      <p className="muted">
         Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
       </p>
     </main>

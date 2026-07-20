@@ -37,6 +37,11 @@ final class UserRepository extends ServiceEntityRepository implements PasswordUp
         return $this->findOneBy(['emailVerificationToken' => $token]);
     }
 
+    public function findOneByResetPasswordToken(string $token): ?User
+    {
+        return $this->findOneBy(['resetPasswordToken' => $token]);
+    }
+
     /**
      * Все игроки с указанным email (для рассылок).
      *
