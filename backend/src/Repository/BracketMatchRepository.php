@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\BracketMatch;
 use App\Entity\Tournament;
+use App\Entity\User;
 use App\Enum\MatchStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -98,5 +99,52 @@ final class BracketMatchRepository extends ServiceEntityRepository
             'round' => $round,
             'slot' => $slot,
         ]);
+    }
+
+    /**
+     * Проигравшие в реально сыгранных матчах стола 1 (не walkover), ещё не
+     * занявшие ничьего места на столе 2 — кандидаты на подсадку в bye-слот.
+     *
+     * @return list<User>
+     */
+    public function findEligibleTable1Losers(Tournament $tournament): array
+    {
+        $table1Matches = $this->createQueryBuilder('m')
+            ->andWhere('m.tournament = :t')
+            ->andWhere('m.tableNumber = 1')
+            ->andWhere('m.status = :done')
+            ->andWhere('m.walkover = false')
+            ->andWhere('m.player1 IS NOT NULL')
+            ->andWhere('m.player2 IS NOT NULL')
+            ->setParameter('t', $tournament)
+            ->setParameter('done', MatchStatus::Done)
+            ->getQuery()
+            ->getResult();
+
+        /** @var array<int, User> $losers */
+        $losers = [];
+        foreach ($table1Matches as $m) {
+            $loser = $m->getWinner() === $m->getPlayer1() ? $m->getPlayer2() : $m->getPlayer1();
+            if ($loser !== null) {
+                $losers[$loser->getId()] = $loser;
+            }
+        }
+
+        // Убираем тех, кто уже где-то на столе 2 (подсажен ранее).
+        $table2Matches = $this->createQueryBuilder('m')
+            ->andWhere('m.tournament = :t')
+            ->andWhere('m.tableNumber = 2')
+            ->setParameter('t', $tournament)
+            ->getQuery()
+            ->getResult();
+        foreach ($table2Matches as $m) {
+            foreach ([$m->getPlayer1(), $m->getPlayer2()] as $p) {
+                if ($p !== null) {
+                    unset($losers[$p->getId()]);
+                }
+            }
+        }
+
+        return array_values($losers);
     }
 }

@@ -954,6 +954,56 @@ ol.roster {
   background: var(--accent-soft);
 }
 
+/* Пустой bye-слот, который админ может заполнить проигравшим с другого стола. */
+.prow.fillable {
+  color: var(--accent);
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* Пикер подсадки проигравшего со стола 1 в bye-слот стола 2. */
+.bye-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+}
+
+.bye-picker {
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--card);
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.bye-picker-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bye-picker-list button {
+  width: 100%;
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  justify-content: flex-start;
+}
+
+.bye-picker-list button:hover {
+  background: var(--accent-soft);
+}
+
 /* Тумблер режима неявки. */
 .walkover-toggle {
   display: flex;

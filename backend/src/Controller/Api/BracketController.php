@@ -92,6 +92,7 @@ final class BracketController extends AbstractController
             'player2' => $this->playerView($m->getPlayer2()),
             'winnerId' => $m->getWinner()?->getId(),
             'status' => $m->getStatus()->value,
+            'walkover' => $m->isWalkover(),
         ];
     }
 

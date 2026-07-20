@@ -11,6 +11,7 @@ use App\Enum\MatchStatus;
 use App\Enum\TournamentStatus;
 use App\Exception\RegistrationException;
 use App\Repository\BracketMatchRepository;
+use App\Repository\TournamentEntryRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -21,6 +22,7 @@ final class AdvanceService
 {
     public function __construct(
         private readonly BracketMatchRepository $matches,
+        private readonly TournamentEntryRepository $entries,
         private readonly EntityManagerInterface $em,
     ) {
     }
@@ -63,6 +65,41 @@ final class AdvanceService
         }
 
         $this->maybeFinish($tournament);
+
+        $this->em->flush();
+    }
+
+    /**
+     * Админ подсаживает проигравшего со стола 1 в пустой bye-слот 1-го тура
+     * стола 2: отменяем прежний автопроход, ставим игрока вторым, матч
+     * возвращается в статус "не сыгран" — дальше его отмечают как обычный.
+     *
+     * @throws RegistrationException
+     */
+    public function fillBye(BracketMatch $match, User $player): void
+    {
+        $tournament = $match->getTournament();
+        if ($tournament->getStatus() === TournamentStatus::Finished) {
+            throw new RegistrationException('Турнир уже завершён', 422);
+        }
+        if ($match->getTableNumber() !== 2 || $match->getRound() !== 1) {
+            throw new RegistrationException('Подсадка доступна только в 1-м туре стола 2', 422);
+        }
+        if ($match->getPlayer1() === null || $match->getPlayer2() !== null || !$match->isWalkover()) {
+            throw new RegistrationException('Это не пустой bye-слот', 422);
+        }
+
+        $eligible = $this->matches->findEligibleTable1Losers($tournament);
+        if (!\in_array($player, $eligible, true)) {
+            throw new RegistrationException('Этот игрок недоступен для подсадки', 422);
+        }
+
+        $this->rollbackWinner($match);
+        $match->setPlayer2($player);
+        $match->setWinner(null);
+
+        $entry = $this->entries->findOneByTournamentAndUser($tournament, $player);
+        $entry?->setTableNumber(2);
 
         $this->em->flush();
     }

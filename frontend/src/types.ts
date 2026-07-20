@@ -99,7 +99,11 @@ export type BracketMatch = {
   player2: BracketPlayer
   winnerId: number | null
   status: 'pending' | 'done'
+  walkover: boolean
 }
+
+// Проигравший на столе 1 — кандидат на подсадку в bye-слот стола 2.
+export type Table1Loser = { id: number; name: string }
 
 export type BracketRound = {
   round: number

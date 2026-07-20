@@ -9,8 +9,10 @@ use App\Entity\TournamentEntry;
 use App\Entity\User;
 use App\Enum\EntryStatus;
 use App\Exception\RegistrationException;
+use App\Repository\BracketMatchRepository;
 use App\Repository\TournamentEntryRepository;
 use App\Repository\UserRepository;
+use App\Service\AdvanceService;
 use App\Service\CheckinService;
 use App\Service\DrawService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -117,6 +119,56 @@ final class AdminTournamentController extends AbstractController
             'status' => $tournament->getStatus()->value,
             'tables' => $result,
         ], 201);
+    }
+
+    /**
+     * Проигравшие на столе 1, доступные для подсадки в bye-слот стола 2.
+     */
+    #[Route('/table1-losers', name: 'api_admin_table1_losers', methods: ['GET'])]
+    public function table1Losers(Tournament $tournament, BracketMatchRepository $matches): JsonResponse
+    {
+        $losers = $matches->findEligibleTable1Losers($tournament);
+
+        return $this->json([
+            'losers' => array_map(
+                static fn (User $u): array => ['id' => $u->getId(), 'name' => $u->getDisplayName()],
+                $losers,
+            ),
+        ]);
+    }
+
+    /**
+     * Подсадить проигравшего со стола 1 в пустой bye-слот 1-го тура стола 2.
+     */
+    #[Route('/matches/{matchId}/fill-bye', name: 'api_admin_fill_bye', methods: ['POST'], requirements: ['matchId' => '\d+'])]
+    public function fillBye(
+        Tournament $tournament,
+        int $matchId,
+        Request $request,
+        BracketMatchRepository $matches,
+        UserRepository $users,
+        AdvanceService $advance,
+    ): JsonResponse {
+        $match = $matches->find($matchId);
+        if ($match === null || $match->getTournament()->getId() !== $tournament->getId()) {
+            return $this->json(['error' => 'Матч не найден'], 404);
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = json_decode($request->getContent(), true) ?? [];
+        $playerId = \is_int($data['playerId'] ?? null) ? $data['playerId'] : null;
+        $player = $playerId !== null ? $users->find($playerId) : null;
+        if ($player === null) {
+            return $this->json(['error' => 'Игрок не найден'], 404);
+        }
+
+        try {
+            $advance->fillBye($match, $player);
+        } catch (RegistrationException $e) {
+            return $this->json(['error' => $e->getMessage()], $e->statusCode);
+        }
+
+        return $this->json(['ok' => true]);
     }
 
     /**

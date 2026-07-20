@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { useParams } from 'react-router-dom'
-import type { Bracket, BracketMatch, BracketPlayer, BracketRound } from '../types'
+import type { Bracket, BracketMatch, BracketPlayer, BracketRound, Table1Loser } from '../types'
 import { useAuth } from '../auth/AuthContext'
-import { getBracket, markWinner } from '../api/bracket'
+import { getBracket, markWinner, getTable1Losers, fillBye } from '../api/bracket'
 
 // Колонка двусторонней сетки: сторона, «шаг» слота, флаги краёв и матчи.
 type Column = {
@@ -99,6 +99,39 @@ export default function BracketPage() {
   // Режим неявки: тап по пришедшему = техпобеда (соперник не пришёл), без статы.
   const [walkoverMode, setWalkoverMode] = useState(false)
 
+  // Пикер подсадки: админ тапнул по пустому bye-слоту стола 2, выбирает
+  // проигравшего со стола 1, чтобы дать ему реальный матч вместо автопрохода.
+  const [byeMatch, setByeMatch] = useState<BracketMatch | null>(null)
+  const [byeLosers, setByeLosers] = useState<Table1Loser[] | null>(null)
+  const [byeError, setByeError] = useState<string | null>(null)
+
+  async function openByePicker(m: BracketMatch) {
+    setByeMatch(m)
+    setByeLosers(null)
+    setByeError(null)
+    try {
+      setByeLosers(await getTable1Losers(tournamentId))
+    } catch {
+      setByeError('Не удалось загрузить список проигравших')
+    }
+  }
+
+  function closeByePicker() {
+    setByeMatch(null)
+    setByeLosers(null)
+    setByeError(null)
+  }
+
+  async function pickByePlayer(playerId: number) {
+    if (!byeMatch) return
+    setBusy(true)
+    const res = await fillBye(tournamentId, byeMatch.id, playerId)
+    if (!res.ok) setError(res.error ?? 'Ошибка')
+    closeByePicker()
+    load()
+    setBusy(false)
+  }
+
   // Кто может отметить этот матч: админ или один из двух игроков; матч готов и не сыгран.
   function canScore(m: BracketMatch): boolean {
     if (m.status !== 'pending' || !m.player1 || !m.player2) return false
@@ -126,23 +159,50 @@ export default function BracketPage() {
   }
 
   // Одна строка игрока в карточке матча.
-  function PlayerRow({ m, player }: { m: BracketMatch; player: BracketPlayer }) {
+  function PlayerRow({
+    m,
+    player,
+    tableNumber,
+    round,
+  }: {
+    m: BracketMatch
+    player: BracketPlayer
+    tableNumber: number
+    round: number
+  }) {
     const isWinner = player != null && m.winnerId === player.id
     const clickable = canScore(m) && player != null
     // Пустой слот: если матч сыгран как автопроход — «нет соперника», иначе ждём соперника.
     const empty = player == null
+    // Пустой bye-слот 1-го тура стола 2 — админ может подсадить сюда проигравшего со стола 1.
+    const fillable = isAdmin && empty && m.status === 'done' && m.walkover && tableNumber === 2 && round === 1
     const label = player
       ? player.name
-      : m.status === 'done'
-        ? 'нет соперника'
-        : 'ждём соперника'
-    const cls = ['prow', isWinner ? 'won' : '', clickable ? 'pickable' : '', empty ? 'empty' : '']
+      : fillable
+        ? '+ добавить игрока'
+        : m.status === 'done'
+          ? 'нет соперника'
+          : 'ждём соперника'
+    const cls = [
+      'prow',
+      isWinner ? 'won' : '',
+      clickable || fillable ? 'pickable' : '',
+      fillable ? 'fillable' : '',
+      empty && !fillable ? 'empty' : '',
+    ]
       .join(' ')
       .trim()
 
     if (clickable) {
       return (
         <button type="button" className={cls} disabled={busy} onClick={() => onPick(m, player)}>
+          {label}
+        </button>
+      )
+    }
+    if (fillable) {
+      return (
+        <button type="button" className={cls} disabled={busy} onClick={() => openByePicker(m)}>
           {label}
         </button>
       )
@@ -204,8 +264,8 @@ export default function BracketPage() {
                     <div className="round-matches">
                       {col.matches.map((m) => (
                         <div key={m.id} className="match">
-                          <PlayerRow m={m} player={m.player1} />
-                          <PlayerRow m={m} player={m.player2} />
+                          <PlayerRow m={m} player={m.player1} tableNumber={table.tableNumber} round={col.round} />
+                          <PlayerRow m={m} player={m.player2} tableNumber={table.tableNumber} round={col.round} />
                         </div>
                       ))}
                     </div>
@@ -215,6 +275,32 @@ export default function BracketPage() {
             </section>
           ))}
         </>
+      )}
+
+      {byeMatch && (
+        <div className="bye-picker-backdrop" onClick={closeByePicker}>
+          <div className="bye-picker" onClick={(e) => e.stopPropagation()}>
+            <h3>Кого подсадить?</h3>
+            <p className="muted">Проигравший со стола 1 займёт этот пустой слот и сыграет реальный матч.</p>
+            {byeError && <div className="form-error">{byeError}</div>}
+            {byeLosers === null && !byeError && <p>Загрузка…</p>}
+            {byeLosers?.length === 0 && (
+              <p className="muted">Нет проигравших со стола 1, доступных для подсадки.</p>
+            )}
+            <ul className="bye-picker-list">
+              {byeLosers?.map((p) => (
+                <li key={p.id}>
+                  <button type="button" disabled={busy} onClick={() => pickByePlayer(p.id)}>
+                    {p.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button type="button" className="secondary" onClick={closeByePicker}>
+              Отмена
+            </button>
+          </div>
+        </div>
       )}
     </main>
   )
