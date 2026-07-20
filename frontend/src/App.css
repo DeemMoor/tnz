@@ -822,6 +822,7 @@ ol.roster {
   border: none;
   border-radius: 0;
   height: calc((var(--mh) - 3px) / 2);
+  min-height: 0;
   line-height: calc((var(--mh) - 3px) / 2);
   color: var(--text);
   font-weight: 500;
