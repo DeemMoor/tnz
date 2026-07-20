@@ -52,3 +52,20 @@ export async function fillBye(
   const data = await res.json().catch(() => ({}))
   return res.ok ? { ok: true } : { ok: false, error: data.error ?? 'Ошибка' }
 }
+
+// Подсадить в bye-слот нового (или ещё не участвовавшего) игрока по телефону+имени.
+export async function fillByeWalkIn(
+  tournamentId: number,
+  matchId: number,
+  phone: string,
+  name: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`/api/admin/tournaments/${tournamentId}/matches/${matchId}/fill-bye-walkin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ phone, name }),
+  })
+  const data = await res.json().catch(() => ({}))
+  return res.ok ? { ok: true } : { ok: false, error: data.error ?? 'Ошибка' }
+}

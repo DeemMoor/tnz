@@ -147,4 +147,23 @@ final class BracketMatchRepository extends ServiceEntityRepository
 
         return array_values($losers);
     }
+
+    /**
+     * Есть ли у игрока хоть одно место в сетке этого турнира (любой стол/тур).
+     * Используется, чтобы отличить "своего" (уже где-то в сетке) от нового
+     * walk-in-игрока при подсадке в bye-слот.
+     */
+    public function hasAppearance(Tournament $tournament, User $user): bool
+    {
+        $count = (int) $this->createQueryBuilder('m')
+            ->select('COUNT(m.id)')
+            ->andWhere('m.tournament = :t')
+            ->andWhere('m.player1 = :u OR m.player2 = :u')
+            ->setParameter('t', $tournament)
+            ->setParameter('u', $user)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $count > 0;
+    }
 }

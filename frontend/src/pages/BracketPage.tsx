@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import type { Bracket, BracketMatch, BracketPlayer, BracketRound, Table1Loser } from '../types'
 import { useAuth } from '../auth/AuthContext'
-import { getBracket, markWinner, getTable1Losers, fillBye } from '../api/bracket'
+import { getBracket, markWinner, getTable1Losers, fillBye, fillByeWalkIn } from '../api/bracket'
 
 // Колонка двусторонней сетки: сторона, «шаг» слота, флаги краёв и матчи.
 type Column = {
@@ -100,15 +100,22 @@ export default function BracketPage() {
   const [walkoverMode, setWalkoverMode] = useState(false)
 
   // Пикер подсадки: админ тапнул по пустому bye-слоту стола 2, выбирает
-  // проигравшего со стола 1, чтобы дать ему реальный матч вместо автопрохода.
+  // проигравшего со стола 1 (или заводит нового игрока), чтобы дать
+  // автопроходящему реальный матч вместо пустого слота.
   const [byeMatch, setByeMatch] = useState<BracketMatch | null>(null)
   const [byeLosers, setByeLosers] = useState<Table1Loser[] | null>(null)
   const [byeError, setByeError] = useState<string | null>(null)
+  const [byeNewPlayer, setByeNewPlayer] = useState(false)
+  const [byePhone, setByePhone] = useState('')
+  const [byeName, setByeName] = useState('')
 
   async function openByePicker(m: BracketMatch) {
     setByeMatch(m)
     setByeLosers(null)
     setByeError(null)
+    setByeNewPlayer(false)
+    setByePhone('')
+    setByeName('')
     try {
       setByeLosers(await getTable1Losers(tournamentId))
     } catch {
@@ -120,10 +127,14 @@ export default function BracketPage() {
     setByeMatch(null)
     setByeLosers(null)
     setByeError(null)
+    setByeNewPlayer(false)
+    setByePhone('')
+    setByeName('')
   }
 
-  async function pickByePlayer(playerId: number) {
+  async function pickByePlayer(playerId: number, name: string) {
     if (!byeMatch) return
+    if (!confirm(`Подсадить ${name} в этот матч?`)) return
     setBusy(true)
     const res = await fillBye(tournamentId, byeMatch.id, playerId)
     if (!res.ok) setError(res.error ?? 'Ошибка')
@@ -132,16 +143,40 @@ export default function BracketPage() {
     setBusy(false)
   }
 
-  // Кто может отметить этот матч: админ или один из двух игроков; матч готов и не сыгран.
+  async function submitByeWalkIn(e: FormEvent) {
+    e.preventDefault()
+    if (!byeMatch) return
+    if (!confirm('Зарегистрировать и подсадить этого игрока в матч?')) return
+    setBusy(true)
+    setByeError(null)
+    const res = await fillByeWalkIn(tournamentId, byeMatch.id, byePhone, byeName)
+    if (!res.ok) {
+      setByeError(res.error ?? 'Ошибка')
+      setBusy(false)
+      return
+    }
+    closeByePicker()
+    load()
+    setBusy(false)
+  }
+
+  // Кто может отметить этот матч: админ (в т.ч. чтобы переотметить уже сыгранный —
+  // на случай ошибочного тапа) или один из двух игроков, пока матч не сыгран.
   function canScore(m: BracketMatch): boolean {
-    if (m.status !== 'pending' || !m.player1 || !m.player2) return false
+    if (!m.player1 || !m.player2) return false
     if (isAdmin) return true
+    if (m.status !== 'pending') return false
     return user != null && (user.id === m.player1.id || user.id === m.player2.id)
   }
 
   async function onPick(m: BracketMatch, player: BracketPlayer) {
     if (!player || !canScore(m)) return
-    if (walkoverMode && !confirm(`Засчитать неявку: ${player.name} проходит дальше без игры?`)) return
+    const question = walkoverMode
+      ? `Засчитать неявку: ${player.name} проходит дальше без игры?`
+      : m.status === 'done'
+        ? `Изменить победителя на ${player.name}?`
+        : `Победитель — ${player.name}?`
+    if (!confirm(question)) return
     setBusy(true)
     setError(null)
     const res = await markWinner(m.id, player.id, walkoverMode)
@@ -281,21 +316,74 @@ export default function BracketPage() {
         <div className="bye-picker-backdrop" onClick={closeByePicker}>
           <div className="bye-picker" onClick={(e) => e.stopPropagation()}>
             <h3>Кого подсадить?</h3>
-            <p className="muted">Проигравший со стола 1 займёт этот пустой слот и сыграет реальный матч.</p>
+            <p className="muted">Игрок займёт этот пустой слот и сыграет реальный матч.</p>
             {byeError && <div className="form-error">{byeError}</div>}
-            {byeLosers === null && !byeError && <p>Загрузка…</p>}
-            {byeLosers?.length === 0 && (
-              <p className="muted">Нет проигравших со стола 1, доступных для подсадки.</p>
+
+            {!byeNewPlayer && (
+              <>
+                {byeLosers === null && !byeError && <p>Загрузка…</p>}
+                {byeLosers?.length === 0 && (
+                  <p className="muted">Нет проигравших со стола 1, доступных для подсадки.</p>
+                )}
+                <ul className="bye-picker-list">
+                  {byeLosers?.map((p) => (
+                    <li key={p.id}>
+                      <button type="button" disabled={busy} onClick={() => pickByePlayer(p.id, p.name)}>
+                        {p.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setByeNewPlayer(true)
+                    setByeError(null)
+                  }}
+                >
+                  + Другой игрок (пришёл только что, в т.ч. незарегистрированный)
+                </button>
+              </>
             )}
-            <ul className="bye-picker-list">
-              {byeLosers?.map((p) => (
-                <li key={p.id}>
-                  <button type="button" disabled={busy} onClick={() => pickByePlayer(p.id)}>
-                    {p.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
+
+            {byeNewPlayer && (
+              <form className="form" onSubmit={submitByeWalkIn}>
+                <label>
+                  Телефон
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="+7 900 000-00-00"
+                    value={byePhone}
+                    onChange={(e) => setByePhone(e.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Фамилия и имя (только для нового игрока)
+                  <input type="text" value={byeName} onChange={(e) => setByeName(e.target.value)} />
+                </label>
+                <span className="hint">Если игрок уже зарегистрирован в системе — впишите только телефон.</span>
+                <button type="submit" disabled={busy}>
+                  Подсадить
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setByeNewPlayer(false)
+                    setByeError(null)
+                  }}
+                >
+                  Назад к списку
+                </button>
+              </form>
+            )}
+
             <button type="button" className="secondary" onClick={closeByePicker}>
               Отмена
             </button>

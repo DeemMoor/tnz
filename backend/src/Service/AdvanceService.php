@@ -6,13 +6,17 @@ namespace App\Service;
 
 use App\Entity\BracketMatch;
 use App\Entity\Tournament;
+use App\Entity\TournamentEntry;
 use App\Entity\User;
+use App\Enum\EntryStatus;
 use App\Enum\MatchStatus;
 use App\Enum\TournamentStatus;
 use App\Exception\RegistrationException;
 use App\Repository\BracketMatchRepository;
 use App\Repository\TournamentEntryRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Ход турнира: запись победителя матча, продвижение по сетке, чемпион стола
@@ -23,6 +27,9 @@ final class AdvanceService
     public function __construct(
         private readonly BracketMatchRepository $matches,
         private readonly TournamentEntryRepository $entries,
+        private readonly UserRepository $users,
+        private readonly PhoneNormalizer $phoneNormalizer,
+        private readonly UserPasswordHasherInterface $hasher,
         private readonly EntityManagerInterface $em,
     ) {
     }
@@ -89,8 +96,9 @@ final class AdvanceService
             throw new RegistrationException('Это не пустой bye-слот', 422);
         }
 
-        $eligible = $this->matches->findEligibleTable1Losers($tournament);
-        if (!\in_array($player, $eligible, true)) {
+        $isTable1Loser = \in_array($player, $this->matches->findEligibleTable1Losers($tournament), true);
+        $isFreshPlayer = !$this->matches->hasAppearance($tournament, $player);
+        if (!$isTable1Loser && !$isFreshPlayer) {
             throw new RegistrationException('Этот игрок недоступен для подсадки', 422);
         }
 
@@ -105,7 +113,54 @@ final class AdvanceService
     }
 
     /**
+     * Как fillBye(), но сначала заводит нового игрока по телефону+имени (или
+     * находит существующего пользователя по телефону), если он ещё не участвует
+     * в этом турнире. В отличие от обычного walk-in (CheckinService::walkIn),
+     * это можно делать и после жеребьёвки — игрок сразу садится в bye-слот,
+     * минуя очередь регистрации.
+     *
+     * @throws RegistrationException
+     */
+    public function fillByeWithNewPlayer(BracketMatch $match, string $rawPhone, string $name): void
+    {
+        $phone = $this->phoneNormalizer->normalize($rawPhone);
+        if ($phone === null) {
+            throw new RegistrationException('Некорректный номер телефона', 422);
+        }
+        $name = trim($name);
+
+        $tournament = $match->getTournament();
+        $user = $this->users->findOneByPhone($phone);
+        if ($user === null) {
+            if ($name === '') {
+                throw new RegistrationException('Укажите имя нового игрока', 422);
+            }
+            $user = new User();
+            $user->setPhone($phone);
+            $user->setName($name);
+            // Временный случайный пароль: аккаунт существует для сетки/статистики.
+            $user->setPassword($this->hasher->hashPassword($user, bin2hex(random_bytes(8))));
+            $this->em->persist($user);
+        }
+
+        // Заводим запись на турнир, только если у игрока её ещё нет вовсе —
+        // а годится ли он для подсадки (новый или проигравший стола 1),
+        // решает единая проверка внутри fillBye().
+        if ($this->entries->findOneByTournamentAndUser($tournament, $user) === null) {
+            $entry = new TournamentEntry($tournament, $user);
+            $entry->setStatus(EntryStatus::Registered);
+            $entry->setCheckedIn(true);
+            $this->em->persist($entry);
+            $this->em->flush();
+        }
+
+        $this->fillBye($match, $user);
+    }
+
+    /**
      * Откат прошлого результата (для переотметки админом).
+     *
+     * @throws RegistrationException если следующий матч уже сыгран
      */
     private function rollbackWinner(BracketMatch $match): void
     {
@@ -120,6 +175,13 @@ final class AdvanceService
             $old->setIsChampion(false);
 
             return;
+        }
+
+        if ($next->getStatus() === MatchStatus::Done) {
+            throw new RegistrationException(
+                'Нельзя изменить: следующий матч уже сыгран — сначала отмените его результат',
+                409,
+            );
         }
 
         // Убираем старого победителя из слота следующего матча, если он ещё там.

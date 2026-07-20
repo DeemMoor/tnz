@@ -172,6 +172,41 @@ final class AdminTournamentController extends AbstractController
     }
 
     /**
+     * Подсадить в bye-слот нового (или ещё не участвовавшего) игрока по телефону+имени.
+     */
+    #[Route(
+        '/matches/{matchId}/fill-bye-walkin',
+        name: 'api_admin_fill_bye_walkin',
+        methods: ['POST'],
+        requirements: ['matchId' => '\d+'],
+    )]
+    public function fillByeWalkIn(
+        Tournament $tournament,
+        int $matchId,
+        Request $request,
+        BracketMatchRepository $matches,
+        AdvanceService $advance,
+    ): JsonResponse {
+        $match = $matches->find($matchId);
+        if ($match === null || $match->getTournament()->getId() !== $tournament->getId()) {
+            return $this->json(['error' => 'Матч не найден'], 404);
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = json_decode($request->getContent(), true) ?? [];
+        $phone = \is_string($data['phone'] ?? null) ? $data['phone'] : '';
+        $name = \is_string($data['name'] ?? null) ? $data['name'] : '';
+
+        try {
+            $advance->fillByeWithNewPlayer($match, $phone, $name);
+        } catch (RegistrationException $e) {
+            return $this->json(['error' => $e->getMessage()], $e->statusCode);
+        }
+
+        return $this->json(['ok' => true]);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function entryView(TournamentEntry $entry): array
