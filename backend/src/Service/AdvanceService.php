@@ -77,6 +77,31 @@ final class AdvanceService
     }
 
     /**
+     * Отменить результат сыгранного матча: убрать победителя, вернуть матч в
+     * «не сыгран». Нельзя, если победитель уже сыграл следующий матч дальше по
+     * сетке (rollbackWinner кинет ошибку — сначала отмени тот).
+     *
+     * @throws RegistrationException
+     */
+    public function clearWinner(BracketMatch $match): void
+    {
+        if ($match->getStatus() !== MatchStatus::Done) {
+            return; // уже не сыгран — отменять нечего
+        }
+
+        $this->rollbackWinner($match);
+        $match->setWinner(null);
+
+        // Раз матч снова не сыгран — турнир точно не завершён.
+        $tournament = $match->getTournament();
+        if ($tournament->getStatus() === TournamentStatus::Finished) {
+            $tournament->setStatus(TournamentStatus::InProgress);
+        }
+
+        $this->em->flush();
+    }
+
+    /**
      * Админ подсаживает проигравшего со стола 1 в пустой bye-слот 1-го тура
      * стола 2: отменяем прежний автопроход, ставим игрока вторым, матч
      * возвращается в статус "не сыгран" — дальше его отмечают как обычный.
@@ -92,7 +117,14 @@ final class AdvanceService
         if ($match->getTableNumber() !== 2 || $match->getRound() !== 1) {
             throw new RegistrationException('Подсадка доступна только в 1-м туре стола 2', 422);
         }
-        if ($match->getPlayer1() === null || $match->getPlayer2() !== null || !$match->isWalkover()) {
+        // Пустой bye-слот: один игрок прошёл автопроходом (матч «сыгран», но
+        // второго игрока нет). walkover тут не при чём — при жеребьёвке байю
+        // ставится обычный setWinner (walkover=false).
+        if (
+            $match->getPlayer1() === null
+            || $match->getPlayer2() !== null
+            || $match->getStatus() !== MatchStatus::Done
+        ) {
             throw new RegistrationException('Это не пустой bye-слот', 422);
         }
 

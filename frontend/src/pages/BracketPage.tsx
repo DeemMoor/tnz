@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } 
 import { useParams } from 'react-router-dom'
 import type { Bracket, BracketMatch, BracketPlayer, BracketRound, Table1Loser } from '../types'
 import { useAuth } from '../auth/AuthContext'
-import { getBracket, markWinner, getTable1Losers, fillBye, fillByeWalkIn } from '../api/bracket'
+import { getBracket, markWinner, clearMatch, getTable1Losers, fillBye, fillByeWalkIn } from '../api/bracket'
 
 // Колонка двусторонней сетки: сторона, «шаг» слота, флаги краёв и матчи.
 type Column = {
@@ -171,11 +171,33 @@ export default function BracketPage() {
 
   async function onPick(m: BracketMatch, player: BracketPlayer) {
     if (!player || !canScore(m)) return
+
+    // Сыгранный матч: тап по победителю — отмена результата, тап по другому — смена победителя.
+    if (m.status === 'done') {
+      if (m.winnerId === player.id) {
+        if (!confirm('Отменить результат матча? Матч вернётся к «не сыгран».')) return
+        setBusy(true)
+        setError(null)
+        const res = await clearMatch(m.id)
+        if (!res.ok) setError(res.error ?? 'Ошибка')
+        load()
+        setBusy(false)
+        return
+      }
+      if (!confirm(`Изменить победителя на ${player.name}?`)) return
+      setBusy(true)
+      setError(null)
+      const res = await markWinner(m.id, player.id, false)
+      if (!res.ok) setError(res.error ?? 'Ошибка')
+      load()
+      setBusy(false)
+      return
+    }
+
+    // Не сыгранный матч: отмечаем победителя (в режиме неявки — техпобеда).
     const question = walkoverMode
       ? `Засчитать неявку: ${player.name} проходит дальше без игры?`
-      : m.status === 'done'
-        ? `Изменить победителя на ${player.name}?`
-        : `Победитель — ${player.name}?`
+      : `Победитель — ${player.name}?`
     if (!confirm(question)) return
     setBusy(true)
     setError(null)
@@ -209,8 +231,9 @@ export default function BracketPage() {
     const clickable = canScore(m) && player != null
     // Пустой слот: если матч сыгран как автопроход — «нет соперника», иначе ждём соперника.
     const empty = player == null
-    // Пустой bye-слот 1-го тура стола 2 — админ может подсадить сюда проигравшего со стола 1.
-    const fillable = isAdmin && empty && m.status === 'done' && m.walkover && tableNumber === 2 && round === 1
+    // Пустой bye-слот 1-го тура стола 2 — админ может подсадить сюда игрока.
+    // Bye-слот = матч «сыгран» (один прошёл автопроходом), а этот слот пуст.
+    const fillable = isAdmin && empty && m.status === 'done' && tableNumber === 2 && round === 1
     const label = player
       ? player.name
       : fillable

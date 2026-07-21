@@ -71,4 +71,27 @@ final class MatchController extends AbstractController
             'tournamentStatus' => $match->getTournament()->getStatus()->value,
         ]);
     }
+
+    /**
+     * Отменить результат матча (вернуть в «не сыгран»). Только админ.
+     */
+    #[Route('/api/matches/{id}/clear', name: 'api_match_clear', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function clear(BracketMatch $match, AdvanceService $advance): JsonResponse
+    {
+        try {
+            $advance->clearWinner($match);
+        } catch (RegistrationException $e) {
+            return $this->json(['error' => $e->getMessage()], $e->statusCode);
+        }
+
+        return $this->json([
+            'match' => [
+                'id' => $match->getId(),
+                'winnerId' => $match->getWinner()?->getId(),
+                'status' => $match->getStatus()->value,
+            ],
+            'tournamentStatus' => $match->getTournament()->getStatus()->value,
+        ]);
+    }
 }

@@ -37,6 +37,16 @@ export async function getTable1Losers(tournamentId: number): Promise<Table1Loser
   return data.losers
 }
 
+// Отменить результат матча — вернуть в «не сыгран» (только админ).
+export async function clearMatch(matchId: number): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`/api/matches/${matchId}/clear`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+  const data = await res.json().catch(() => ({}))
+  return res.ok ? { ok: true } : { ok: false, error: data.error ?? 'Ошибка' }
+}
+
 // Подсадить проигравшего со стола 1 в пустой bye-слот стола 2 (только админ).
 export async function fillBye(
   tournamentId: number,
