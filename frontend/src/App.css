@@ -981,11 +981,27 @@ ol.roster {
   border-radius: 16px 16px 0 0;
   padding: 20px;
   box-shadow: var(--shadow);
+  /* Колонка: все дети (заголовок, текст, список, кнопки) — на всю ширину
+     и с одинаковым вертикальным отступом. */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Убираем дефолтные margin'ы у заголовка/текста — расстояние задаёт gap. */
+.bye-picker h3,
+.bye-picker > p {
+  margin: 0;
+}
+
+/* Прямые кнопки модалки (в т.ч. «Отмена») — на всю ширину, как в списке. */
+.bye-picker > button {
+  width: 100%;
 }
 
 .bye-picker-list {
   list-style: none;
-  margin: 12px 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
