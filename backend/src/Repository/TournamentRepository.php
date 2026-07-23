@@ -21,12 +21,20 @@ final class TournamentRepository extends ServiceEntityRepository
 
     /**
      * Ближайший незавершённый турнир (по дате). Для главной / регистрации.
+     *
+     * Прошедшие турниры не показываем, даже если они так и не были завершены
+     * (зависли из-за сбоя) — иначе такой турнир вечно висел бы на главной и
+     * заслонял следующий. День самого турнира ещё считается актуальным (>=).
      */
-    public function findNearestUpcoming(): ?Tournament
+    public function findNearestUpcoming(?\DateTimeImmutable $today = null): ?Tournament
     {
+        $today ??= new \DateTimeImmutable('today');
+
         return $this->createQueryBuilder('t')
             ->andWhere('t.status != :finished')
+            ->andWhere('t.date >= :today')
             ->setParameter('finished', TournamentStatus::Finished)
+            ->setParameter('today', $today->setTime(0, 0))
             ->orderBy('t.date', 'ASC')
             ->setMaxResults(1)
             ->getQuery()

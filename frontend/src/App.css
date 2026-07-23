@@ -744,6 +744,12 @@ ol.roster {
   font-weight: 800;
 }
 
+.check-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .stage-action {
   margin-top: 8px;
 }

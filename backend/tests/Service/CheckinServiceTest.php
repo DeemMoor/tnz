@@ -96,6 +96,25 @@ final class CheckinServiceTest extends KernelTestCase
         self::assertNotNull($this->users->findOneByPhone('79120001122'));
     }
 
+    public function testAdminUncheckinDropsPlayerOnClose(): void
+    {
+        $t = $this->makeTournament();
+        $u = $this->makeUser(1);
+        $this->registration->register($t, $u, $this->regNow);
+
+        // Игрок отметился сам, но на перекличке его нет — админ снимает отметку.
+        $this->checkin->checkIn($t, $u, byAdmin: true);
+        $entry = $this->checkin->uncheckIn($t, $u);
+
+        self::assertFalse($entry->isCheckedIn());
+        // Остаётся записанным до закрытия чекина.
+        self::assertSame(EntryStatus::Registered, $entry->getStatus());
+
+        // При закрытии чекина снятый уходит в dropped и в сетку не попадёт.
+        $this->checkin->closeCheckin($t);
+        self::assertSame(EntryStatus::Dropped, $entry->getStatus());
+    }
+
     public function testCloseCheckinDropsNoShowsAndPromotesQueue(): void
     {
         $t = $this->makeTournament();

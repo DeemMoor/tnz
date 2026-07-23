@@ -25,7 +25,7 @@ class BracketMatch
     private ?int $id = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Tournament $tournament;
 
     /** Стол (1 или 2). Каждый стол — своя независимая сетка. */

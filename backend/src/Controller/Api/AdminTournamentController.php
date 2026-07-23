@@ -75,6 +75,23 @@ final class AdminTournamentController extends AbstractController
         return $this->roster($tournament);
     }
 
+    #[Route('/checkin/{userId}', name: 'api_admin_uncheckin', methods: ['DELETE'], requirements: ['userId' => '\d+'])]
+    public function uncheckinUser(Tournament $tournament, int $userId, UserRepository $users): JsonResponse
+    {
+        $user = $users->find($userId);
+        if ($user === null) {
+            return $this->json(['error' => 'Игрок не найден'], 404);
+        }
+
+        try {
+            $this->checkin->uncheckIn($tournament, $user);
+        } catch (RegistrationException $e) {
+            return $this->json(['error' => $e->getMessage()], $e->statusCode);
+        }
+
+        return $this->roster($tournament);
+    }
+
     #[Route('/walk-in', name: 'api_admin_walk_in', methods: ['POST'])]
     public function walkIn(Tournament $tournament, Request $request): JsonResponse
     {

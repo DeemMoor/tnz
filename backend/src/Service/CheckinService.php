@@ -73,6 +73,30 @@ final class CheckinService
     }
 
     /**
+     * Снять отметку о приходе (только админ, до жеребьёвки). Нужно, когда игрок
+     * отметился сам, но на перекличке его не оказалось: снятый останется записанным,
+     * а при закрытии чекина уйдёт в dropped и в сетку не попадёт.
+     *
+     * @throws RegistrationException
+     */
+    public function uncheckIn(Tournament $tournament, User $user): TournamentEntry
+    {
+        $this->assertNotDrawn($tournament);
+
+        $entry = $this->entries->findOneByTournamentAndUser($tournament, $user);
+        if ($entry === null || $entry->getStatus() !== EntryStatus::Registered) {
+            throw new RegistrationException('Снять отметку можно только у записанного участника', 409);
+        }
+
+        if ($entry->isCheckedIn()) {
+            $entry->setCheckedIn(false);
+            $this->em->flush();
+        }
+
+        return $entry;
+    }
+
+    /**
      * Админ добавляет игрока в турнир по телефону (+имя, если игрок новый).
      * Если игрок с таким телефоном уже есть — используем его аккаунт.
      * Отмечаем присутствие сразу только если открыто окно чекина (день турнира);

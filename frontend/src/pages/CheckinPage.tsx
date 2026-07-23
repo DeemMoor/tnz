@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import type { Roster } from '../types'
 import { useAuth } from '../auth/AuthContext'
-import { getRoster, adminCheckIn, walkIn, closeCheckin, drawTournament } from '../api/checkin'
+import { getRoster, adminCheckIn, adminUncheckIn, walkIn, closeCheckin, drawTournament } from '../api/checkin'
 
 // CheckinPage — админский экран дня турнира: отметки, walk-in, закрытие чекина
 // и жеребьёвка. После жеребьёвки состав фиксируется, показываем «Открыть сетку».
@@ -49,6 +49,19 @@ export default function CheckinPage() {
       setRoster(await adminCheckIn(tournamentId, userId))
     } catch {
       setError('Ошибка отметки')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onUncheck(userId: number) {
+    if (!confirm('Снять отметку о приходе? Игрок останется записанным, но при закрытии чекина уйдёт из состава.')) return
+    setBusy(true)
+    setError(null)
+    try {
+      setRoster(await adminUncheckIn(tournamentId, userId))
+    } catch {
+      setError('Ошибка снятия отметки')
     } finally {
       setBusy(false)
     }
@@ -141,7 +154,16 @@ export default function CheckinPage() {
                 <span className="rname">{e.name}</span>
                 <span className="rphone">{e.phone}</span>
                 {e.checkedIn ? (
-                  <span className="ok-check">✓</span>
+                  !drawn ? (
+                    <span className="check-actions">
+                      <span className="ok-check">✓</span>
+                      <button type="button" className="small" onClick={() => onUncheck(e.userId)} disabled={busy}>
+                        Снять
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="ok-check">✓</span>
+                  )
                 ) : !drawn ? (
                   <button type="button" className="small" onClick={() => onCheck(e.userId)} disabled={busy}>
                     Отметить

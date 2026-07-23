@@ -19,6 +19,15 @@ export async function adminCheckIn(id: number, userId: number): Promise<Roster> 
   return res.json()
 }
 
+export async function adminUncheckIn(id: number, userId: number): Promise<Roster> {
+  const res = await fetch(`/api/admin/tournaments/${id}/checkin/${userId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error('Не удалось снять отметку')
+  return res.json()
+}
+
 export async function walkIn(
   id: number,
   phone: string,
