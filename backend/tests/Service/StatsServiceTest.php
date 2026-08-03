@@ -104,6 +104,54 @@ final class StatsServiceTest extends KernelTestCase
         self::assertSame(5, $totalWins, 'Байи (автопроходы) не считаются победами');
     }
 
+    public function testReplacedGameCountsForWinnerOnly(): void
+    {
+        $t = new Tournament();
+        $t->setName('Repl');
+        $t->setDate(new \DateTimeImmutable('2026-07-19'));
+        $t->setStatus(TournamentStatus::Checkin);
+        $this->em->persist($t);
+        $this->em->flush();
+
+        for ($i = 1; $i <= 4; $i++) {
+            $u = new User();
+            $u->setPhone('7922' . str_pad((string) $i, 7, '0', \STR_PAD_LEFT));
+            $u->setName('R' . $i);
+            $u->setPassword('hash');
+            $this->em->persist($u);
+            $this->em->flush();
+            $this->registration->register($t, $u, ignoreSchedule: true);
+        }
+        $this->draw->draw($t);
+
+        // Первый матч сыгран, потом проигравшего заменил опоздавший.
+        $match = $this->matches->findOneBySlot($t, 1, 1, 0);
+        $winner = $match->getPlayer1();
+        $loser = $match->getPlayer2();
+        $this->advance->recordWinner($match, $winner, byAdmin: true);
+
+        $latecomer = new User();
+        $latecomer->setPhone('79229990000');
+        $latecomer->setName('Опоздавший');
+        $latecomer->setPassword('hash');
+        $this->em->persist($latecomer);
+        $this->em->flush();
+
+        $this->advance->replacePlayer($match, $loser, $latecomer);
+
+        $board = $this->stats->leaderboard();
+        $byId = array_column($board, null, 'userId');
+
+        // Победителю игра засчитана, хотя матч в сетке начат заново.
+        self::assertArrayHasKey($winner->getId(), $byId);
+        self::assertSame(1, $byId[$winner->getId()]['games']);
+        self::assertSame(1, $byId[$winner->getId()]['wins']);
+        self::assertSame(1, $byId[$winner->getId()]['points']);
+
+        // Заменённому — ничего (так решено).
+        self::assertArrayNotHasKey($loser->getId(), $byId);
+    }
+
     public function testWalkoverNotCountedInStats(): void
     {
         $t = new \App\Entity\Tournament();

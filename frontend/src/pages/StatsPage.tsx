@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { PlayerStat } from '../types'
 import { getStats } from '../api/stats'
 import Avatar from '../components/Avatar'
@@ -42,10 +43,10 @@ export default function StatsPage() {
               <tr key={p.userId}>
                 <td className="rank">{i + 1}</td>
                 <td className="pname">
-                  <span className="pname-cell">
+                  <Link className="pname-cell" to={`/players/${p.userId}`}>
                     <Avatar name={p.name} url={p.avatarUrl} size={28} />
                     {p.name}
-                  </span>
+                  </Link>
                 </td>
                 <td>{p.games}</td>
                 <td>{p.wins}</td>

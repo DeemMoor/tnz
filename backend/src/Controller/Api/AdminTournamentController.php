@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Entity\BracketMatch;
 use App\Entity\Tournament;
 use App\Entity\TournamentEntry;
 use App\Entity\User;
 use App\Enum\EntryStatus;
 use App\Exception\RegistrationException;
 use App\Repository\BracketMatchRepository;
+use App\Repository\ReplacedGameRepository;
 use App\Repository\TournamentEntryRepository;
 use App\Repository\UserRepository;
 use App\Service\AdvanceService;
@@ -139,23 +141,129 @@ final class AdminTournamentController extends AbstractController
     }
 
     /**
-     * Проигравшие на столе 1, доступные для подсадки в bye-слот стола 2.
+     * Выбывшие игроки турнира — кандидаты, которых можно посадить в свободный
+     * слот 1-го тура или поставить вместо проигравшего.
      */
-    #[Route('/table1-losers', name: 'api_admin_table1_losers', methods: ['GET'])]
-    public function table1Losers(Tournament $tournament, BracketMatchRepository $matches): JsonResponse
-    {
-        $losers = $matches->findEligibleTable1Losers($tournament);
+    #[Route('/available-players', name: 'api_admin_available_players', methods: ['GET'])]
+    public function availablePlayers(
+        Tournament $tournament,
+        BracketMatchRepository $matches,
+        ReplacedGameRepository $replacedGames,
+    ): JsonResponse {
+        /** @var array<int, User> $players */
+        $players = [];
+        // Проиграли и выбыли из сетки.
+        foreach ($matches->findEliminatedPlayers($tournament) as $user) {
+            $players[(int) $user->getId()] = $user;
+        }
+        // Кого заменили: в сетке их уже нет, но сыграть ещё раз они могут.
+        foreach ($replacedGames->findLosersByTournament($tournament) as $user) {
+            if (!$matches->hasAppearance($tournament, $user)) {
+                $players[(int) $user->getId()] = $user;
+            }
+        }
 
-        return $this->json([
-            'losers' => array_map(
-                static fn (User $u): array => ['id' => $u->getId(), 'name' => $u->getDisplayName()],
-                $losers,
-            ),
-        ]);
+        $view = array_map(
+            static fn (User $u): array => ['id' => $u->getId(), 'name' => $u->getDisplayName()],
+            array_values($players),
+        );
+        usort($view, static fn (array $a, array $b): int => $a['name'] <=> $b['name']);
+
+        return $this->json(['players' => $view]);
     }
 
     /**
-     * Подсадить проигравшего со стола 1 в пустой bye-слот 1-го тура стола 2.
+     * Убрать игрока из матча 1-го тура: слот пустеет, результат отменяется.
+     */
+    #[Route(
+        '/matches/{matchId}/remove-player',
+        name: 'api_admin_remove_player',
+        methods: ['POST'],
+        requirements: ['matchId' => '\d+'],
+    )]
+    public function removePlayer(
+        Tournament $tournament,
+        int $matchId,
+        Request $request,
+        BracketMatchRepository $matches,
+        UserRepository $users,
+        AdvanceService $advance,
+    ): JsonResponse {
+        $match = $this->findMatch($tournament, $matchId, $matches);
+        if ($match === null) {
+            return $this->json(['error' => 'Матч не найден'], 404);
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = json_decode($request->getContent(), true) ?? [];
+        $player = \is_int($data['playerId'] ?? null) ? $users->find($data['playerId']) : null;
+        if ($player === null) {
+            return $this->json(['error' => 'Игрок не найден'], 404);
+        }
+
+        try {
+            $advance->removePlayer($match, $player);
+        } catch (RegistrationException $e) {
+            return $this->json(['error' => $e->getMessage()], $e->statusCode);
+        }
+
+        return $this->json(['ok' => true]);
+    }
+
+    /**
+     * Заменить игрока в матче 1-го тура. Тело: outgoingId + либо playerId
+     * (кто-то из выбывших), либо phone/name (пришёл только что).
+     * Если матч сыгран — сыгранная игра уходит в статистику победителю.
+     */
+    #[Route(
+        '/matches/{matchId}/replace-player',
+        name: 'api_admin_replace_player',
+        methods: ['POST'],
+        requirements: ['matchId' => '\d+'],
+    )]
+    public function replacePlayer(
+        Tournament $tournament,
+        int $matchId,
+        Request $request,
+        BracketMatchRepository $matches,
+        UserRepository $users,
+        AdvanceService $advance,
+    ): JsonResponse {
+        $match = $this->findMatch($tournament, $matchId, $matches);
+        if ($match === null) {
+            return $this->json(['error' => 'Матч не найден'], 404);
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = json_decode($request->getContent(), true) ?? [];
+        $outgoing = \is_int($data['outgoingId'] ?? null) ? $users->find($data['outgoingId']) : null;
+        if ($outgoing === null) {
+            return $this->json(['error' => 'Не указан заменяемый игрок'], 404);
+        }
+
+        $playerId = \is_int($data['playerId'] ?? null) ? $data['playerId'] : null;
+
+        try {
+            if ($playerId !== null) {
+                $player = $users->find($playerId);
+                if ($player === null) {
+                    return $this->json(['error' => 'Игрок не найден'], 404);
+                }
+                $advance->replacePlayer($match, $outgoing, $player);
+            } else {
+                $phone = \is_string($data['phone'] ?? null) ? $data['phone'] : '';
+                $name = \is_string($data['name'] ?? null) ? $data['name'] : '';
+                $advance->replacePlayerWithNewPlayer($match, $outgoing, $phone, $name);
+            }
+        } catch (RegistrationException $e) {
+            return $this->json(['error' => $e->getMessage()], $e->statusCode);
+        }
+
+        return $this->json(['ok' => true]);
+    }
+
+    /**
+     * Подсадить выбывшего игрока в свободный слот 1-го тура.
      */
     #[Route('/matches/{matchId}/fill-bye', name: 'api_admin_fill_bye', methods: ['POST'], requirements: ['matchId' => '\d+'])]
     public function fillBye(
@@ -166,8 +274,8 @@ final class AdminTournamentController extends AbstractController
         UserRepository $users,
         AdvanceService $advance,
     ): JsonResponse {
-        $match = $matches->find($matchId);
-        if ($match === null || $match->getTournament()->getId() !== $tournament->getId()) {
+        $match = $this->findMatch($tournament, $matchId, $matches);
+        if ($match === null) {
             return $this->json(['error' => 'Матч не найден'], 404);
         }
 
@@ -204,8 +312,8 @@ final class AdminTournamentController extends AbstractController
         BracketMatchRepository $matches,
         AdvanceService $advance,
     ): JsonResponse {
-        $match = $matches->find($matchId);
-        if ($match === null || $match->getTournament()->getId() !== $tournament->getId()) {
+        $match = $this->findMatch($tournament, $matchId, $matches);
+        if ($match === null) {
             return $this->json(['error' => 'Матч не найден'], 404);
         }
 
@@ -221,6 +329,16 @@ final class AdminTournamentController extends AbstractController
         }
 
         return $this->json(['ok' => true]);
+    }
+
+    /**
+     * Матч этого турнира по id (чужой матч — как не найденный).
+     */
+    private function findMatch(Tournament $tournament, int $matchId, BracketMatchRepository $matches): ?BracketMatch
+    {
+        $match = $matches->find($matchId);
+
+        return $match !== null && $match->getTournament()->getId() === $tournament->getId() ? $match : null;
     }
 
     /**

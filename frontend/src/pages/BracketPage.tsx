@@ -1,18 +1,43 @@
 import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
-import type { Bracket, BracketMatch, BracketPlayer, BracketRound, Table1Loser } from '../types'
+import { useNavigate, useParams } from 'react-router-dom'
+import type { AvailablePlayer, Bracket, BracketMatch, BracketPlayer, BracketRound } from '../types'
 import { useAuth } from '../auth/AuthContext'
-import { getBracket, markWinner, clearMatch, getTable1Losers, fillBye, fillByeWalkIn } from '../api/bracket'
+import {
+  getBracket,
+  markWinner,
+  clearMatch,
+  getAvailablePlayers,
+  fillBye,
+  fillByeWalkIn,
+  replacePlayer,
+  replacePlayerWalkIn,
+  removePlayer,
+} from '../api/bracket'
 
 // Колонка двусторонней сетки: сторона, «шаг» слота, флаги краёв и матчи.
 type Column = {
   key: string
   side: 'left' | 'right' | 'center'
-  round: number // для расчёта --slot (1-based от края)
+  round: number // для расчёта --slot (1-based от края колонки)
+  matchRound: number // настоящий номер тура матчей (1 = первый сыгранный)
   firstCol: boolean // крайняя колонка (нет входящей линии)
   preFinal: boolean // полуфинал: к финалу идёт простой горизонталью
   label: string
   matches: BracketMatch[]
+}
+
+// Кого тапнули: игрок + матч, в котором он стоит (с номером стола и тура).
+type MenuTarget = {
+  match: BracketMatch
+  player: { id: number; name: string }
+  tableNumber: number
+  round: number
+}
+
+// Выбор игрока: сажаем в пустой слот (outgoing = null) или меняем кого-то.
+type Picker = {
+  match: BracketMatch
+  outgoing: { id: number; name: string } | null
 }
 
 // Раскладываем туры в двусторонний bracket: половина пар слева, половина справа,
@@ -24,6 +49,7 @@ function buildColumns(rounds: BracketRound[]): Column[] {
       key: 'c',
       side: 'center' as const,
       round: 1,
+      matchRound: 1,
       firstCol: true,
       preFinal: false,
       label: rd.label,
@@ -40,6 +66,7 @@ function buildColumns(rounds: BracketRound[]): Column[] {
       key: `l${r}`,
       side: 'left',
       round: r,
+      matchRound: r,
       firstCol: r === 1,
       preFinal: r === R - 1,
       label: rd.label,
@@ -51,6 +78,7 @@ function buildColumns(rounds: BracketRound[]): Column[] {
     key: 'c',
     side: 'center',
     round: R - 1,
+    matchRound: R,
     firstCol: false,
     preFinal: false,
     label: rounds[R - 1].label,
@@ -64,6 +92,7 @@ function buildColumns(rounds: BracketRound[]): Column[] {
       key: `r${r}`,
       side: 'right',
       round: r,
+      matchRound: r,
       firstCol: r === 1,
       preFinal: r === R - 1,
       label: rd.label,
@@ -73,12 +102,13 @@ function buildColumns(rounds: BracketRound[]): Column[] {
   return cols
 }
 
-// BracketPage — публичная турнирная сетка. Залогиненный участник (или админ)
-// может тапнуть по победителю прямо в матче.
+// BracketPage — публичная турнирная сетка. Тап по игроку открывает меню:
+// отметить победителя, заменить, убрать из сетки, посмотреть профиль.
 export default function BracketPage() {
   const { id } = useParams()
   const tournamentId = Number(id)
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   const [bracket, setBracket] = useState<Bracket | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -95,116 +125,117 @@ export default function BracketPage() {
   }, [tournamentId, load])
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN') ?? false
+  const finished = bracket?.tournament.status === 'finished'
 
-  // Режим неявки: тап по пришедшему = техпобеда (соперник не пришёл), без статы.
-  const [walkoverMode, setWalkoverMode] = useState(false)
+  // Меню по тапу на игроке и шаг подтверждения удаления внутри него.
+  const [menu, setMenu] = useState<MenuTarget | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState(false)
 
-  // Пикер подсадки: админ тапнул по пустому bye-слоту стола 2, выбирает
-  // проигравшего со стола 1 (или заводит нового игрока), чтобы дать
-  // автопроходящему реальный матч вместо пустого слота.
-  const [byeMatch, setByeMatch] = useState<BracketMatch | null>(null)
-  const [byeLosers, setByeLosers] = useState<Table1Loser[] | null>(null)
-  const [byeError, setByeError] = useState<string | null>(null)
-  const [byeNewPlayer, setByeNewPlayer] = useState(false)
-  const [byePhone, setByePhone] = useState('')
-  const [byeName, setByeName] = useState('')
+  // Пикер: кого посадить в свободный слот / кем заменить игрока.
+  const [picker, setPicker] = useState<Picker | null>(null)
+  const [pickerPlayers, setPickerPlayers] = useState<AvailablePlayer[] | null>(null)
+  const [pickerError, setPickerError] = useState<string | null>(null)
+  const [newPlayerMode, setNewPlayerMode] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [name, setName] = useState('')
 
-  async function openByePicker(m: BracketMatch) {
-    setByeMatch(m)
-    setByeLosers(null)
-    setByeError(null)
-    setByeNewPlayer(false)
-    setByePhone('')
-    setByeName('')
-    try {
-      setByeLosers(await getTable1Losers(tournamentId))
-    } catch {
-      setByeError('Не удалось загрузить список проигравших')
-    }
+  function closeMenu() {
+    setMenu(null)
+    setConfirmRemove(false)
   }
 
-  function closeByePicker() {
-    setByeMatch(null)
-    setByeLosers(null)
-    setByeError(null)
-    setByeNewPlayer(false)
-    setByePhone('')
-    setByeName('')
-  }
-
-  async function pickByePlayer(playerId: number, name: string) {
-    if (!byeMatch) return
-    if (!confirm(`Подсадить ${name} в этот матч?`)) return
+  // Выполнить действие и перечитать сетку (после отметки победителя состав
+  // следующих туров меняется, поэтому всегда тянем свежие данные).
+  async function run(action: () => Promise<{ ok: boolean; error?: string }>) {
     setBusy(true)
-    const res = await fillBye(tournamentId, byeMatch.id, playerId)
+    setError(null)
+    const res = await action()
     if (!res.ok) setError(res.error ?? 'Ошибка')
-    closeByePicker()
+    closeMenu()
     load()
     setBusy(false)
   }
 
-  async function submitByeWalkIn(e: FormEvent) {
-    e.preventDefault()
-    if (!byeMatch) return
-    if (!confirm('Зарегистрировать и подсадить этого игрока в матч?')) return
+  async function openPicker(outgoing: { id: number; name: string } | null) {
+    if (!menu) return
+    setPicker({ match: menu.match, outgoing })
+    setPickerPlayers(null)
+    setPickerError(null)
+    setNewPlayerMode(false)
+    setPhone('')
+    setName('')
+    closeMenu()
+    try {
+      setPickerPlayers(await getAvailablePlayers(tournamentId))
+    } catch {
+      setPickerError('Не удалось загрузить список игроков')
+    }
+  }
+
+  // Пустой слот в первом туре — админ сажает туда игрока (кнопка «+ добавить»).
+  async function openPickerForEmptySlot(m: BracketMatch) {
+    setPicker({ match: m, outgoing: null })
+    setPickerPlayers(null)
+    setPickerError(null)
+    setNewPlayerMode(false)
+    setPhone('')
+    setName('')
+    try {
+      setPickerPlayers(await getAvailablePlayers(tournamentId))
+    } catch {
+      setPickerError('Не удалось загрузить список игроков')
+    }
+  }
+
+  function closePicker() {
+    setPicker(null)
+    setPickerPlayers(null)
+    setPickerError(null)
+    setNewPlayerMode(false)
+    setPhone('')
+    setName('')
+  }
+
+  async function pickExisting(playerId: number) {
+    if (!picker) return
     setBusy(true)
-    setByeError(null)
-    const res = await fillByeWalkIn(tournamentId, byeMatch.id, byePhone, byeName)
+    setError(null)
+    const { match, outgoing } = picker
+    const res = outgoing
+      ? await replacePlayer(tournamentId, match.id, outgoing.id, playerId)
+      : await fillBye(tournamentId, match.id, playerId)
+    if (!res.ok) setError(res.error ?? 'Ошибка')
+    closePicker()
+    load()
+    setBusy(false)
+  }
+
+  async function submitNewPlayer(e: FormEvent) {
+    e.preventDefault()
+    if (!picker) return
+    setBusy(true)
+    setPickerError(null)
+    const { match, outgoing } = picker
+    const res = outgoing
+      ? await replacePlayerWalkIn(tournamentId, match.id, outgoing.id, phone, name)
+      : await fillByeWalkIn(tournamentId, match.id, phone, name)
     if (!res.ok) {
-      setByeError(res.error ?? 'Ошибка')
+      setPickerError(res.error ?? 'Ошибка')
       setBusy(false)
       return
     }
-    closeByePicker()
+    closePicker()
     load()
     setBusy(false)
   }
 
-  // Кто может отметить этот матч: админ (в т.ч. чтобы переотметить уже сыгранный —
+  // Кто может отметить результат: админ (в т.ч. переотметить уже сыгранный —
   // на случай ошибочного тапа) или один из двух игроков, пока матч не сыгран.
   function canScore(m: BracketMatch): boolean {
     if (!m.player1 || !m.player2) return false
     if (isAdmin) return true
     if (m.status !== 'pending') return false
     return user != null && (user.id === m.player1.id || user.id === m.player2.id)
-  }
-
-  async function onPick(m: BracketMatch, player: BracketPlayer) {
-    if (!player || !canScore(m)) return
-
-    // Сыгранный матч: тап по победителю — отмена результата, тап по другому — смена победителя.
-    if (m.status === 'done') {
-      if (m.winnerId === player.id) {
-        if (!confirm('Отменить результат матча? Матч вернётся к «не сыгран».')) return
-        setBusy(true)
-        setError(null)
-        const res = await clearMatch(m.id)
-        if (!res.ok) setError(res.error ?? 'Ошибка')
-        load()
-        setBusy(false)
-        return
-      }
-      if (!confirm(`Изменить победителя на ${player.name}?`)) return
-      setBusy(true)
-      setError(null)
-      const res = await markWinner(m.id, player.id, false)
-      if (!res.ok) setError(res.error ?? 'Ошибка')
-      load()
-      setBusy(false)
-      return
-    }
-
-    // Не сыгранный матч: отмечаем победителя (в режиме неявки — техпобеда).
-    const question = walkoverMode
-      ? `Засчитать неявку: ${player.name} проходит дальше без игры?`
-      : `Победитель — ${player.name}?`
-    if (!confirm(question)) return
-    setBusy(true)
-    setError(null)
-    const res = await markWinner(m.id, player.id, walkoverMode)
-    if (!res.ok) setError(res.error ?? 'Ошибка')
-    load() // перечитать сетку (продвижение победителя)
-    setBusy(false)
   }
 
   function formatDate(ymd: string): string {
@@ -228,12 +259,9 @@ export default function BracketPage() {
     round: number
   }) {
     const isWinner = player != null && m.winnerId === player.id
-    const clickable = canScore(m) && player != null
-    // Пустой слот: если матч сыгран как автопроход — «нет соперника», иначе ждём соперника.
     const empty = player == null
-    // Пустой bye-слот 1-го тура стола 2 — админ может подсадить сюда игрока.
-    // Bye-слот = матч «сыгран» (один прошёл автопроходом), а этот слот пуст.
-    const fillable = isAdmin && empty && m.status === 'done' && tableNumber === 2 && round === 1
+    // Пустой слот 1-го тура — админ может посадить сюда игрока.
+    const fillable = isAdmin && empty && round === 1 && !finished
     const label = player
       ? player.name
       : fillable
@@ -244,28 +272,131 @@ export default function BracketPage() {
     const cls = [
       'prow',
       isWinner ? 'won' : '',
-      clickable || fillable ? 'pickable' : '',
+      !empty || fillable ? 'pickable' : '',
       fillable ? 'fillable' : '',
       empty && !fillable ? 'empty' : '',
     ]
       .join(' ')
       .trim()
 
-    if (clickable) {
+    if (player) {
       return (
-        <button type="button" className={cls} disabled={busy} onClick={() => onPick(m, player)}>
+        <button
+          type="button"
+          className={cls}
+          disabled={busy}
+          onClick={() => {
+            setConfirmRemove(false)
+            setMenu({ match: m, player, tableNumber, round })
+          }}
+        >
           {label}
         </button>
       )
     }
     if (fillable) {
       return (
-        <button type="button" className={cls} disabled={busy} onClick={() => openByePicker(m)}>
+        <button type="button" className={cls} disabled={busy} onClick={() => openPickerForEmptySlot(m)}>
           {label}
         </button>
       )
     }
     return <div className={cls}>{label}</div>
+  }
+
+  // Меню действий по игроку. Набор пунктов зависит от того, кто смотрит
+  // (админ / участник матча / гость) и что уже произошло в матче.
+  function PlayerMenu({ target }: { target: MenuTarget }) {
+    const { match: m, player, round } = target
+    const isWinner = m.winnerId === player.id
+    const bothPlayers = m.player1 != null && m.player2 != null
+    const scorable = canScore(m)
+    const canEdit = isAdmin && round === 1 && !finished
+
+    return (
+      <div className="player-menu-backdrop" onClick={closeMenu}>
+        <div className="player-menu" onClick={(e) => e.stopPropagation()}>
+          <div className="player-menu-head">{player.name}</div>
+
+          {confirmRemove ? (
+            <>
+              <p className="player-menu-note">
+                Убрать игрока из сетки? Результат матча, если он был, отменится.
+              </p>
+              <button
+                type="button"
+                className="danger"
+                disabled={busy}
+                onClick={() => run(() => removePlayer(tournamentId, m.id, player.id))}
+              >
+                Да, убрать
+              </button>
+              <button type="button" className="secondary" onClick={() => setConfirmRemove(false)}>
+                Назад
+              </button>
+            </>
+          ) : (
+            <>
+              {scorable && bothPlayers && !isWinner && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => run(() => markWinner(m.id, player.id, false))}
+                >
+                  {m.status === 'done' ? 'Сделать победителем' : 'Победитель'}
+                </button>
+              )}
+
+              {scorable && bothPlayers && m.status === 'pending' && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => run(() => markWinner(m.id, player.id, true))}
+                >
+                  Проходит без игры (соперник не явился)
+                </button>
+              )}
+
+              {isAdmin && !bothPlayers && m.status === 'pending' && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => run(() => markWinner(m.id, player.id, false))}
+                >
+                  Проходит дальше (нет соперника)
+                </button>
+              )}
+
+              {isAdmin && isWinner && m.status === 'done' && (
+                <button type="button" disabled={busy} onClick={() => run(() => clearMatch(m.id))}>
+                  Отменить результат
+                </button>
+              )}
+
+              {canEdit && !(isWinner && m.status === 'done') && (
+                <button type="button" disabled={busy} onClick={() => openPicker(player)}>
+                  Заменить
+                </button>
+              )}
+
+              {canEdit && (
+                <button type="button" className="danger" disabled={busy} onClick={() => setConfirmRemove(true)}>
+                  Очистить
+                </button>
+              )}
+
+              <button type="button" onClick={() => navigate(`/players/${player.id}`)}>
+                Профиль
+              </button>
+
+              <button type="button" className="secondary" onClick={closeMenu}>
+                Отмена
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -277,23 +408,11 @@ export default function BracketPage() {
         <>
           <h1>
             Турнир #{bracket.tournament.number}
-            {bracket.tournament.status === 'finished' && ' · завершён'}
+            {finished && ' · завершён'}
           </h1>
           <p className="muted">{formatDate(bracket.tournament.date)}</p>
           {user == null && (
             <p className="hint">Войдите, чтобы отмечать результаты своих матчей.</p>
-          )}
-
-          {/* Режим неявки: тап отмечает техпобеду (соперник не пришёл). */}
-          {user != null && bracket.tournament.status !== 'finished' && (
-            <label className={`walkover-toggle${walkoverMode ? ' on' : ''}`}>
-              <input
-                type="checkbox"
-                checked={walkoverMode}
-                onChange={(e) => setWalkoverMode(e.target.checked)}
-              />
-              Режим неявки: тапни того, кто пришёл — он проходит без игры (не в статистику)
-            </label>
           )}
 
           {bracket.tables.length === 0 && (
@@ -322,8 +441,8 @@ export default function BracketPage() {
                     <div className="round-matches">
                       {col.matches.map((m) => (
                         <div key={m.id} className="match">
-                          <PlayerRow m={m} player={m.player1} tableNumber={table.tableNumber} round={col.round} />
-                          <PlayerRow m={m} player={m.player2} tableNumber={table.tableNumber} round={col.round} />
+                          <PlayerRow m={m} player={m.player1} tableNumber={table.tableNumber} round={col.matchRound} />
+                          <PlayerRow m={m} player={m.player2} tableNumber={table.tableNumber} round={col.matchRound} />
                         </div>
                       ))}
                     </div>
@@ -335,23 +454,29 @@ export default function BracketPage() {
         </>
       )}
 
-      {byeMatch && (
-        <div className="bye-picker-backdrop" onClick={closeByePicker}>
-          <div className="bye-picker" onClick={(e) => e.stopPropagation()}>
-            <h3>Кого подсадить?</h3>
-            <p className="muted">Игрок займёт этот пустой слот и сыграет реальный матч.</p>
-            {byeError && <div className="form-error">{byeError}</div>}
+      {menu && <PlayerMenu target={menu} />}
 
-            {!byeNewPlayer && (
+      {picker && (
+        <div className="bye-picker-backdrop" onClick={closePicker}>
+          <div className="bye-picker" onClick={(e) => e.stopPropagation()}>
+            <h3>{picker.outgoing ? `Кем заменить: ${picker.outgoing.name}` : 'Кого посадить?'}</h3>
+            <p className="muted">
+              {picker.outgoing
+                ? 'Сыгранная игра засчитается победителю, матч начнётся заново с новым соперником.'
+                : 'Игрок займёт этот пустой слот и сыграет реальный матч.'}
+            </p>
+            {pickerError && <div className="form-error">{pickerError}</div>}
+
+            {!newPlayerMode && (
               <>
-                {byeLosers === null && !byeError && <p>Загрузка…</p>}
-                {byeLosers?.length === 0 && (
-                  <p className="muted">Нет проигравших со стола 1, доступных для подсадки.</p>
+                {pickerPlayers === null && !pickerError && <p>Загрузка…</p>}
+                {pickerPlayers?.length === 0 && (
+                  <p className="muted">Нет выбывших игроков — заведите нового.</p>
                 )}
                 <ul className="bye-picker-list">
-                  {byeLosers?.map((p) => (
+                  {pickerPlayers?.map((p) => (
                     <li key={p.id}>
-                      <button type="button" disabled={busy} onClick={() => pickByePlayer(p.id, p.name)}>
+                      <button type="button" disabled={busy} onClick={() => pickExisting(p.id)}>
                         {p.name}
                       </button>
                     </li>
@@ -362,8 +487,8 @@ export default function BracketPage() {
                   className="secondary"
                   disabled={busy}
                   onClick={() => {
-                    setByeNewPlayer(true)
-                    setByeError(null)
+                    setNewPlayerMode(true)
+                    setPickerError(null)
                   }}
                 >
                   + Другой игрок (пришёл только что, в т.ч. незарегистрированный)
@@ -371,8 +496,8 @@ export default function BracketPage() {
               </>
             )}
 
-            {byeNewPlayer && (
-              <form className="form" onSubmit={submitByeWalkIn}>
+            {newPlayerMode && (
+              <form className="form" onSubmit={submitNewPlayer}>
                 <label>
                   Телефон
                   <input
@@ -380,26 +505,26 @@ export default function BracketPage() {
                     inputMode="tel"
                     autoComplete="tel"
                     placeholder="+7 900 000-00-00"
-                    value={byePhone}
-                    onChange={(e) => setByePhone(e.target.value)}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     required
                   />
                 </label>
                 <label>
                   Фамилия и имя (только для нового игрока)
-                  <input type="text" value={byeName} onChange={(e) => setByeName(e.target.value)} />
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
                 </label>
                 <span className="hint">Если игрок уже зарегистрирован в системе — впишите только телефон.</span>
                 <button type="submit" disabled={busy}>
-                  Подсадить
+                  {picker.outgoing ? 'Заменить' : 'Посадить'}
                 </button>
                 <button
                   type="button"
                   className="secondary"
                   disabled={busy}
                   onClick={() => {
-                    setByeNewPlayer(false)
-                    setByeError(null)
+                    setNewPlayerMode(false)
+                    setPickerError(null)
                   }}
                 >
                   Назад к списку
@@ -407,7 +532,7 @@ export default function BracketPage() {
               </form>
             )}
 
-            <button type="button" className="secondary" onClick={closeByePicker}>
+            <button type="button" className="secondary" onClick={closePicker}>
               Отмена
             </button>
           </div>

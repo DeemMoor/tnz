@@ -102,8 +102,8 @@ export type BracketMatch = {
   walkover: boolean
 }
 
-// Проигравший на столе 1 — кандидат на подсадку в bye-слот стола 2.
-export type Table1Loser = { id: number; name: string }
+// Выбывший игрок — кандидат на подсадку в свободный слот / замену.
+export type AvailablePlayer = { id: number; name: string }
 
 export type BracketRound = {
   round: number
@@ -119,6 +119,21 @@ export type BracketTable = {
 export type Bracket = {
   tournament: { id: number; number: number; date: string; status: string }
   tables: BracketTable[]
+}
+
+// Публичная карточка игрока (/api/players/{id}).
+export type PlayerCard = {
+  id: number
+  name: string
+  avatarUrl: string | null
+  isChampion: boolean
+  stats: {
+    games: number
+    wins: number
+    losses: number
+    points: number
+    rank: number | null // место в общей таблице, null если не сыграл ни матча
+  }
 }
 
 export type Roster = {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\BracketMatch;
+use App\Entity\ReplacedGame;
 use App\Entity\Tournament;
 use App\Entity\TournamentEntry;
 use App\Entity\User;
@@ -102,44 +103,35 @@ final class AdvanceService
     }
 
     /**
-     * Админ подсаживает проигравшего со стола 1 в пустой bye-слот 1-го тура
-     * стола 2: отменяем прежний автопроход, ставим игрока вторым, матч
-     * возвращается в статус "не сыгран" — дальше его отмечают как обычный.
+     * Админ сажает игрока в свободный слот матча 1-го тура: либо это пустой
+     * bye-слот (кто-то прошёл автопроходом — тогда автопроход отменяем), либо
+     * место освободилось после «Очистить». Матч встаёт в статус «не сыгран» —
+     * дальше его отмечают как обычный.
      *
      * @throws RegistrationException
      */
     public function fillBye(BracketMatch $match, User $player): void
     {
-        $tournament = $match->getTournament();
-        if ($tournament->getStatus() === TournamentStatus::Finished) {
-            throw new RegistrationException('Турнир уже завершён', 422);
+        $this->assertFirstRoundEditable($match);
+
+        if ($match->getPlayer1() !== null && $match->getPlayer2() !== null) {
+            throw new RegistrationException('В этом матче нет свободного места', 422);
         }
-        if ($match->getTableNumber() !== 2 || $match->getRound() !== 1) {
-            throw new RegistrationException('Подсадка доступна только в 1-м туре стола 2', 422);
-        }
-        // Пустой bye-слот: один игрок прошёл автопроходом (матч «сыгран», но
-        // второго игрока нет). walkover тут не при чём — при жеребьёвке байю
-        // ставится обычный setWinner (walkover=false).
-        if (
-            $match->getPlayer1() === null
-            || $match->getPlayer2() !== null
-            || $match->getStatus() !== MatchStatus::Done
-        ) {
-            throw new RegistrationException('Это не пустой bye-слот', 422);
+        $this->assertAvailableForSeat($match->getTournament(), $player);
+
+        // Автопроход: матч помечен сыгранным, хотя соперника не было.
+        if ($match->getStatus() === MatchStatus::Done) {
+            $this->rollbackWinner($match);
+            $match->setWinner(null);
         }
 
-        $isTable1Loser = \in_array($player, $this->matches->findEligibleTable1Losers($tournament), true);
-        $isFreshPlayer = !$this->matches->hasAppearance($tournament, $player);
-        if (!$isTable1Loser && !$isFreshPlayer) {
-            throw new RegistrationException('Этот игрок недоступен для подсадки', 422);
+        if ($match->getPlayer1() === null) {
+            $match->setPlayer1($player);
+        } else {
+            $match->setPlayer2($player);
         }
 
-        $this->rollbackWinner($match);
-        $match->setPlayer2($player);
-        $match->setWinner(null);
-
-        $entry = $this->entries->findOneByTournamentAndUser($tournament, $player);
-        $entry?->setTableNumber(2);
+        $this->seatEntry($match, $player);
 
         $this->em->flush();
     }
@@ -148,12 +140,177 @@ final class AdvanceService
      * Как fillBye(), но сначала заводит нового игрока по телефону+имени (или
      * находит существующего пользователя по телефону), если он ещё не участвует
      * в этом турнире. В отличие от обычного walk-in (CheckinService::walkIn),
-     * это можно делать и после жеребьёвки — игрок сразу садится в bye-слот,
+     * это можно делать и после жеребьёвки — игрок сразу садится в слот,
      * минуя очередь регистрации.
      *
      * @throws RegistrationException
      */
     public function fillByeWithNewPlayer(BracketMatch $match, string $rawPhone, string $name): void
+    {
+        $this->fillBye($match, $this->resolvePlayer($match->getTournament(), $rawPhone, $name));
+    }
+
+    /**
+     * Замена игрока в матче 1-го тура — тот самый случай «подошёл опоздавший».
+     *
+     * Если матч уже сыгран, заменить можно только проигравшего: сыгранная игра
+     * уезжает в лог `ReplacedGame` (победа засчитается победителю в статистике),
+     * матч возвращается в «не сыгран» уже с новым соперником. Если матч ещё не
+     * сыгран — это просто подмена игрока в слоте, без всякой статистики.
+     *
+     * @throws RegistrationException
+     */
+    public function replacePlayer(BracketMatch $match, User $outgoing, User $player): void
+    {
+        $this->assertFirstRoundEditable($match);
+
+        $isP1 = $match->getPlayer1() === $outgoing;
+        $isP2 = $match->getPlayer2() === $outgoing;
+        if (!$isP1 && !$isP2) {
+            throw new RegistrationException('Этот игрок не участвует в матче', 422);
+        }
+        if ($outgoing === $player) {
+            throw new RegistrationException('Это тот же самый игрок', 422);
+        }
+        $this->assertAvailableForSeat($match->getTournament(), $player);
+
+        if ($match->getStatus() === MatchStatus::Done) {
+            $winner = $match->getWinner();
+            if ($winner === $outgoing) {
+                throw new RegistrationException(
+                    'Заменить можно только проигравшего — победитель проходит дальше',
+                    422,
+                );
+            }
+
+            // Игра реально состоялась (оба были, не техпобеда) — сохраняем её,
+            // чтобы победа не пропала вместе с заменённым соперником.
+            if ($winner !== null && $match->getPlayer1() !== null && $match->getPlayer2() !== null && !$match->isWalkover()) {
+                $this->em->persist(new ReplacedGame(
+                    $match->getTournament(),
+                    $match,
+                    $winner,
+                    $outgoing,
+                    $match->getPlayedAt(),
+                ));
+            }
+
+            $this->rollbackWinner($match);
+            $match->setWinner(null);
+        }
+
+        if ($isP1) {
+            $match->setPlayer1($player);
+        } else {
+            $match->setPlayer2($player);
+        }
+
+        // Заменённый выбывает, но стол ему оставляем — он тут играл.
+        $this->entries->findOneByTournamentAndUser($match->getTournament(), $outgoing)?->setEliminated(true);
+        $this->seatEntry($match, $player);
+
+        $this->em->flush();
+    }
+
+    /**
+     * Как replacePlayer(), но новый игрок заводится по телефону+имени.
+     *
+     * @throws RegistrationException
+     */
+    public function replacePlayerWithNewPlayer(
+        BracketMatch $match,
+        User $outgoing,
+        string $rawPhone,
+        string $name,
+    ): void {
+        $this->replacePlayer($match, $outgoing, $this->resolvePlayer($match->getTournament(), $rawPhone, $name));
+    }
+
+    /**
+     * Убрать игрока из сетки: слот пустеет, результат матча (если был)
+     * отменяется — как будто этого игрока в матче и не было. Нужно, когда
+     * жеребьёвка посадила того, кто на самом деле не пришёл.
+     *
+     * @throws RegistrationException
+     */
+    public function removePlayer(BracketMatch $match, User $player): void
+    {
+        $this->assertFirstRoundEditable($match);
+
+        $isP1 = $match->getPlayer1() === $player;
+        $isP2 = $match->getPlayer2() === $player;
+        if (!$isP1 && !$isP2) {
+            throw new RegistrationException('Этот игрок не участвует в матче', 422);
+        }
+
+        if ($match->getStatus() === MatchStatus::Done) {
+            $this->rollbackWinner($match);
+            $match->setWinner(null);
+        }
+
+        if ($isP1) {
+            $match->setPlayer1(null);
+        } else {
+            $match->setPlayer2(null);
+        }
+
+        // Из сетки убран совсем — стол сбрасываем, чтобы не числился участником.
+        $entry = $this->entries->findOneByTournamentAndUser($match->getTournament(), $player);
+        $entry?->setTableNumber(null);
+        $entry?->setEliminated(false);
+
+        $this->em->flush();
+    }
+
+    /**
+     * Правка состава разрешена только в 1-м туре незавершённого турнира:
+     * дальше по сетке игроки попадают продвижением, а не руками.
+     *
+     * @throws RegistrationException
+     */
+    private function assertFirstRoundEditable(BracketMatch $match): void
+    {
+        if ($match->getTournament()->getStatus() === TournamentStatus::Finished) {
+            throw new RegistrationException('Турнир уже завершён', 422);
+        }
+        if ($match->getRound() !== 1) {
+            throw new RegistrationException('Менять состав можно только в первом туре', 422);
+        }
+    }
+
+    /**
+     * Игрока можно сажать в слот, если он либо ещё не в сетке (пришёл только
+     * что), либо уже выбыл (проиграл и нигде не ждёт своего матча).
+     *
+     * @throws RegistrationException
+     */
+    private function assertAvailableForSeat(Tournament $tournament, User $player): void
+    {
+        $isEliminated = \in_array($player, $this->matches->findEliminatedPlayers($tournament), true);
+        $isFreshPlayer = !$this->matches->hasAppearance($tournament, $player);
+        if (!$isEliminated && !$isFreshPlayer) {
+            throw new RegistrationException('Этот игрок сейчас в игре — его нельзя посадить в другой матч', 422);
+        }
+    }
+
+    /**
+     * Запись игрока на турнир получает стол этого матча (и снова «в игре»).
+     */
+    private function seatEntry(BracketMatch $match, User $player): void
+    {
+        $entry = $this->entries->findOneByTournamentAndUser($match->getTournament(), $player);
+        $entry?->setTableNumber($match->getTableNumber());
+        $entry?->setEliminated(false);
+    }
+
+    /**
+     * Найти пользователя по телефону или завести нового (walk-in) и записать
+     * его на турнир, если записи ещё нет. Годится ли он для посадки — решает
+     * общая проверка в fillBye()/replacePlayer().
+     *
+     * @throws RegistrationException
+     */
+    private function resolvePlayer(Tournament $tournament, string $rawPhone, string $name): User
     {
         $phone = $this->phoneNormalizer->normalize($rawPhone);
         if ($phone === null) {
@@ -161,7 +318,6 @@ final class AdvanceService
         }
         $name = trim($name);
 
-        $tournament = $match->getTournament();
         $user = $this->users->findOneByPhone($phone);
         if ($user === null) {
             if ($name === '') {
@@ -175,9 +331,6 @@ final class AdvanceService
             $this->em->persist($user);
         }
 
-        // Заводим запись на турнир, только если у игрока её ещё нет вовсе —
-        // а годится ли он для подсадки (новый или проигравший стола 1),
-        // решает единая проверка внутри fillBye().
         if ($this->entries->findOneByTournamentAndUser($tournament, $user) === null) {
             $entry = new TournamentEntry($tournament, $user);
             $entry->setStatus(EntryStatus::Registered);
@@ -186,7 +339,7 @@ final class AdvanceService
             $this->em->flush();
         }
 
-        $this->fillBye($match, $user);
+        return $user;
     }
 
     /**

@@ -102,47 +102,50 @@ final class BracketMatchRepository extends ServiceEntityRepository
     }
 
     /**
-     * Проигравшие в реально сыгранных матчах стола 1 (не walkover), ещё не
-     * занявшие ничьего места на столе 2 — кандидаты на подсадку в bye-слот.
+     * Выбывшие из сетки: проиграли реальный матч (не техпобеда) и больше нигде
+     * в турнире не живы — не ждут своего матча и ничего не выигрывали.
+     * Это кандидаты на подсадку в свободный слот другого стола.
      *
      * @return list<User>
      */
-    public function findEligibleTable1Losers(Tournament $tournament): array
+    public function findEliminatedPlayers(Tournament $tournament): array
     {
-        $table1Matches = $this->createQueryBuilder('m')
-            ->andWhere('m.tournament = :t')
-            ->andWhere('m.tableNumber = 1')
-            ->andWhere('m.status = :done')
-            ->andWhere('m.walkover = false')
-            ->andWhere('m.player1 IS NOT NULL')
-            ->andWhere('m.player2 IS NOT NULL')
-            ->setParameter('t', $tournament)
-            ->setParameter('done', MatchStatus::Done)
-            ->getQuery()
-            ->getResult();
+        $all = $this->findByTournamentOrdered($tournament);
 
         /** @var array<int, User> $losers */
         $losers = [];
-        foreach ($table1Matches as $m) {
-            $loser = $m->getWinner() === $m->getPlayer1() ? $m->getPlayer2() : $m->getPlayer1();
-            if ($loser !== null) {
-                $losers[$loser->getId()] = $loser;
+        /** @var array<int, true> $alive */
+        $alive = [];
+
+        foreach ($all as $m) {
+            $p1 = $m->getPlayer1();
+            $p2 = $m->getPlayer2();
+
+            if ($m->getStatus() !== MatchStatus::Done) {
+                // Матч ещё не сыгран — оба его игрока в игре.
+                foreach ([$p1, $p2] as $p) {
+                    if ($p !== null) {
+                        $alive[(int) $p->getId()] = true;
+                    }
+                }
+
+                continue;
+            }
+
+            $winner = $m->getWinner();
+            if ($winner !== null) {
+                $alive[(int) $winner->getId()] = true;
+            }
+
+            // Проигравший реально сыгранного матча (байи и техпобеды не в счёт).
+            if ($p1 !== null && $p2 !== null && !$m->isWalkover()) {
+                $loser = $winner === $p1 ? $p2 : $p1;
+                $losers[(int) $loser->getId()] = $loser;
             }
         }
 
-        // Убираем тех, кто уже где-то на столе 2 (подсажен ранее).
-        $table2Matches = $this->createQueryBuilder('m')
-            ->andWhere('m.tournament = :t')
-            ->andWhere('m.tableNumber = 2')
-            ->setParameter('t', $tournament)
-            ->getQuery()
-            ->getResult();
-        foreach ($table2Matches as $m) {
-            foreach ([$m->getPlayer1(), $m->getPlayer2()] as $p) {
-                if ($p !== null) {
-                    unset($losers[$p->getId()]);
-                }
-            }
+        foreach (array_keys($alive) as $id) {
+            unset($losers[$id]);
         }
 
         return array_values($losers);

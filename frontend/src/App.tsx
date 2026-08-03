@@ -13,6 +13,7 @@ import ChampionsPage from './pages/ChampionsPage'
 import ContactsPage from './pages/ContactsPage'
 import StackPage from './pages/StackPage'
 import StatsPage from './pages/StatsPage'
+import PlayerCardPage from './pages/PlayerCardPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -34,6 +35,7 @@ function App() {
       <Route path="/tournaments/:id/bracket" element={<BracketPage />} />
       <Route path="/tournaments/:id/participants" element={<ParticipantsPage />} />
       <Route path="/stats" element={<StatsPage />} />
+      <Route path="/players/:id" element={<PlayerCardPage />} />
       <Route path="/champions" element={<ChampionsPage />} />
       <Route path="/contacts" element={<ContactsPage />} />
       <Route path="/stack" element={<StackPage />} />

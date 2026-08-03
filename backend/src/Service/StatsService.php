@@ -6,6 +6,7 @@ namespace App\Service;
 
 use App\Entity\User;
 use App\Repository\BracketMatchRepository;
+use App\Repository\ReplacedGameRepository;
 use App\Repository\UserRepository;
 
 /**
@@ -16,6 +17,7 @@ final class StatsService
 {
     public function __construct(
         private readonly BracketMatchRepository $matches,
+        private readonly ReplacedGameRepository $replacedGames,
         private readonly UserRepository $users,
         private readonly UserPresenter $presenter,
     ) {
@@ -40,6 +42,14 @@ final class StatsService
             if ($row['w'] !== null) {
                 $wins[$row['w']] = ($wins[$row['w']] ?? 0) + 1;
             }
+        }
+
+        // Игры, вытесненные из сетки заменой игрока (подошёл опоздавший, и
+        // победитель играет заново уже с ним). Засчитываем только победителю —
+        // заменённому по договорённости ничего не пишем.
+        foreach ($this->replacedGames->fetchWinCounts() as $userId => $count) {
+            $played[$userId] = ($played[$userId] ?? 0) + $count;
+            $wins[$userId] = ($wins[$userId] ?? 0) + $count;
         }
 
         if ($played === []) {
@@ -74,5 +84,30 @@ final class StatsService
         });
 
         return $rows;
+    }
+
+    /**
+     * Статистика одного игрока плюс его место в общей таблице (rank).
+     * Если игрок ещё не сыграл ни одного матча — нули и rank = null.
+     *
+     * @return array{games: int, wins: int, losses: int, points: int, rank: int|null}
+     */
+    public function forUser(User $user): array
+    {
+        $userId = $user->getId();
+
+        foreach ($this->leaderboard() as $i => $row) {
+            if ($row['userId'] === $userId) {
+                return [
+                    'games' => $row['games'],
+                    'wins' => $row['wins'],
+                    'losses' => $row['losses'],
+                    'points' => $row['points'],
+                    'rank' => $i + 1,
+                ];
+            }
+        }
+
+        return ['games' => 0, 'wins' => 0, 'losses' => 0, 'points' => 0, 'rank' => null];
     }
 }

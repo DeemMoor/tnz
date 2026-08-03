@@ -1,6 +1,20 @@
-import type { Bracket, Table1Loser } from '../types'
+import type { AvailablePlayer, Bracket } from '../types'
 
 // Запросы к сетке и отметке результата.
+
+type Result = { ok: boolean; error?: string }
+
+// Общая обёртка: шлём JSON, разбираем ответ в { ok } или { ok:false, error }.
+async function post(url: string, body?: unknown): Promise<Result> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    credentials: 'include',
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  const data = await res.json().catch(() => ({}))
+  return res.ok ? { ok: true } : { ok: false, error: data.error ?? 'Ошибка' }
+}
 
 export async function getBracket(id: number): Promise<Bracket> {
   const res = await fetch(`/api/tournaments/${id}/bracket`, {
@@ -12,70 +26,79 @@ export async function getBracket(id: number): Promise<Bracket> {
 
 // Отметить победителя матча. Доступно админу или участнику матча (проверка на бэке).
 // walkover=true — техпобеда (соперник не явился), в статистику не идёт.
-export async function markWinner(
-  matchId: number,
-  winnerId: number,
-  walkover = false,
-): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`/api/matches/${matchId}/winner`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ winnerId, walkover }),
-  })
-  const data = await res.json().catch(() => ({}))
-  return res.ok ? { ok: true } : { ok: false, error: data.error ?? 'Ошибка' }
-}
-
-// Проигравшие на столе 1, доступные для подсадки в bye-слот стола 2 (только админ).
-export async function getTable1Losers(tournamentId: number): Promise<Table1Loser[]> {
-  const res = await fetch(`/api/admin/tournaments/${tournamentId}/table1-losers`, {
-    credentials: 'include',
-  })
-  if (!res.ok) throw new Error('Не удалось загрузить список проигравших')
-  const data = await res.json()
-  return data.losers
+export function markWinner(matchId: number, winnerId: number, walkover = false): Promise<Result> {
+  return post(`/api/matches/${matchId}/winner`, { winnerId, walkover })
 }
 
 // Отменить результат матча — вернуть в «не сыгран» (только админ).
-export async function clearMatch(matchId: number): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`/api/matches/${matchId}/clear`, {
-    method: 'POST',
-    credentials: 'include',
-  })
-  const data = await res.json().catch(() => ({}))
-  return res.ok ? { ok: true } : { ok: false, error: data.error ?? 'Ошибка' }
+export function clearMatch(matchId: number): Promise<Result> {
+  return post(`/api/matches/${matchId}/clear`)
 }
 
-// Подсадить проигравшего со стола 1 в пустой bye-слот стола 2 (только админ).
-export async function fillBye(
-  tournamentId: number,
-  matchId: number,
-  playerId: number,
-): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`/api/admin/tournaments/${tournamentId}/matches/${matchId}/fill-bye`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+// Выбывшие игроки турнира — кандидаты на подсадку в свободный слот или замену.
+export async function getAvailablePlayers(tournamentId: number): Promise<AvailablePlayer[]> {
+  const res = await fetch(`/api/admin/tournaments/${tournamentId}/available-players`, {
     credentials: 'include',
-    body: JSON.stringify({ playerId }),
   })
-  const data = await res.json().catch(() => ({}))
-  return res.ok ? { ok: true } : { ok: false, error: data.error ?? 'Ошибка' }
+  if (!res.ok) throw new Error('Не удалось загрузить список игроков')
+  const data = await res.json()
+  return data.players
 }
 
-// Подсадить в bye-слот нового (или ещё не участвовавшего) игрока по телефону+имени.
-export async function fillByeWalkIn(
+// Посадить выбывшего игрока в свободный слот матча 1-го тура (только админ).
+export function fillBye(tournamentId: number, matchId: number, playerId: number): Promise<Result> {
+  return post(`/api/admin/tournaments/${tournamentId}/matches/${matchId}/fill-bye`, { playerId })
+}
+
+// Посадить в свободный слот нового (или ещё не участвовавшего) игрока по телефону+имени.
+export function fillByeWalkIn(
   tournamentId: number,
   matchId: number,
   phone: string,
   name: string,
-): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`/api/admin/tournaments/${tournamentId}/matches/${matchId}/fill-bye-walkin`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ phone, name }),
+): Promise<Result> {
+  return post(`/api/admin/tournaments/${tournamentId}/matches/${matchId}/fill-bye-walkin`, {
+    phone,
+    name,
   })
-  const data = await res.json().catch(() => ({}))
-  return res.ok ? { ok: true } : { ok: false, error: data.error ?? 'Ошибка' }
+}
+
+// Заменить игрока в матче 1-го тура выбывшим игроком (только админ).
+// Если матч был сыгран — победа уходит в статистику победителю, матч начинается заново.
+export function replacePlayer(
+  tournamentId: number,
+  matchId: number,
+  outgoingId: number,
+  playerId: number,
+): Promise<Result> {
+  return post(`/api/admin/tournaments/${tournamentId}/matches/${matchId}/replace-player`, {
+    outgoingId,
+    playerId,
+  })
+}
+
+// То же, но новым игроком по телефону+имени (пришёл только что).
+export function replacePlayerWalkIn(
+  tournamentId: number,
+  matchId: number,
+  outgoingId: number,
+  phone: string,
+  name: string,
+): Promise<Result> {
+  return post(`/api/admin/tournaments/${tournamentId}/matches/${matchId}/replace-player`, {
+    outgoingId,
+    phone,
+    name,
+  })
+}
+
+// Убрать игрока из сетки: слот пустеет, результат матча отменяется (только админ).
+export function removePlayer(
+  tournamentId: number,
+  matchId: number,
+  playerId: number,
+): Promise<Result> {
+  return post(`/api/admin/tournaments/${tournamentId}/matches/${matchId}/remove-player`, {
+    playerId,
+  })
 }
