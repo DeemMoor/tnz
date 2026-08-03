@@ -141,8 +141,9 @@ final class AdminTournamentController extends AbstractController
     }
 
     /**
-     * Выбывшие игроки турнира — кандидаты, которых можно посадить в свободный
-     * слот 1-го тура или поставить вместо проигравшего.
+     * Свободные игроки турнира — кандидаты, которых можно посадить в пустой
+     * слот 1-го тура или поставить вместо проигравшего. Это все, кто сейчас не
+     * занят в сетке: выбывшие, заменённые и записанные позже (walk-in).
      */
     #[Route('/available-players', name: 'api_admin_available_players', methods: ['GET'])]
     public function availablePlayers(
@@ -150,6 +151,16 @@ final class AdminTournamentController extends AbstractController
         BracketMatchRepository $matches,
         ReplacedGameRepository $replacedGames,
     ): JsonResponse {
+        // Кто сейчас стоит в сетке (в любом слоте любого стола).
+        $inBracket = [];
+        foreach ($matches->findByTournamentOrdered($tournament) as $m) {
+            foreach ([$m->getPlayer1(), $m->getPlayer2()] as $p) {
+                if ($p !== null) {
+                    $inBracket[(int) $p->getId()] = true;
+                }
+            }
+        }
+
         /** @var array<int, User> $players */
         $players = [];
         // Проиграли и выбыли из сетки.
@@ -158,7 +169,15 @@ final class AdminTournamentController extends AbstractController
         }
         // Кого заменили: в сетке их уже нет, но сыграть ещё раз они могут.
         foreach ($replacedGames->findLosersByTournament($tournament) as $user) {
-            if (!$matches->hasAppearance($tournament, $user)) {
+            if (!isset($inBracket[(int) $user->getId()])) {
+                $players[(int) $user->getId()] = $user;
+            }
+        }
+        // Записаны на турнир, но в сетку не попали — например, добавлены уже
+        // после жеребьёвки. Снявшихся не предлагаем.
+        foreach ($this->entries->findBy(['tournament' => $tournament]) as $entry) {
+            $user = $entry->getUser();
+            if ($entry->getStatus() !== EntryStatus::Cancelled && !isset($inBracket[(int) $user->getId()])) {
                 $players[(int) $user->getId()] = $user;
             }
         }
