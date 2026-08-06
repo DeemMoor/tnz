@@ -558,6 +558,18 @@ button.small {
   align-self: center;
 }
 
+/* Регистрация аккаунта на главной — показывается гостю всегда,
+   независимо от того, назначен ли ближайший турнир. */
+.hero-signup {
+  max-width: 440px;
+  margin: 20px auto 0;
+  text-align: center;
+}
+
+.hero-signup .btn-lg {
+  width: 100%;
+}
+
 .features {
   display: grid;
   grid-template-columns: 1fr;

@@ -97,18 +97,6 @@ export default function HomePage() {
 
         {error && <div className="form-error">{error}</div>}
 
-        {/* Не залогинен — сперва регистрация аккаунта. */}
-        {!user && (
-          <>
-            <Link className="btn btn-lg" to="/register">
-              Зарегистрироваться
-            </Link>
-            <div className="hero-auth">
-              Уже есть аккаунт? <Link to="/login">Войти</Link>
-            </div>
-          </>
-        )}
-
         {/* Залогинен — действие зависит от статуса. */}
         {user && me?.status === 'registered' && (
           <>
@@ -173,6 +161,19 @@ export default function HomePage() {
         </p>
 
         {!loading && renderTournamentCTA()}
+
+        {/* Регистрация аккаунта — вне блока турнира: гость должен видеть её
+            всегда, даже когда ближайший турнир ещё не назначен. */}
+        {!loading && !user && (
+          <div className="hero-signup">
+            <Link className="btn btn-lg" to="/register">
+              Зарегистрироваться
+            </Link>
+            <div className="hero-auth">
+              Уже есть аккаунт? <Link to="/login">Войти</Link>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="features">
