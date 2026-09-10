@@ -15,10 +15,13 @@ use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
@@ -45,8 +48,13 @@ final class TournamentCrudController extends AbstractCrudController
         $announce = Action::new('announce', 'Разослать анонс', 'fa fa-envelope')
             ->linkToCrudAction('announce');
 
+        // Открыть запись досрочно, не дожидаясь четверга 16:00.
+        $openNow = Action::new('openRegistrationNow', 'Открыть запись сейчас', 'fa fa-unlock')
+            ->linkToCrudAction('openRegistrationNow');
+
         return $actions
             ->add(Crud::PAGE_INDEX, $announce)
+            ->add(Crud::PAGE_INDEX, $openNow)
             ->update(Crud::PAGE_INDEX, Action::NEW, static fn (Action $a) => $a->setLabel('Создать турнир'))
             ->update(Crud::PAGE_INDEX, Action::EDIT, static fn (Action $a) => $a->setLabel('Изменить'))
             ->update(Crud::PAGE_INDEX, Action::DELETE, static fn (Action $a) => $a->setLabel('Удалить'));
@@ -72,11 +80,39 @@ final class TournamentCrudController extends AbstractCrudController
         );
     }
 
+    /**
+     * Открыть запись на турнир прямо сейчас: проставляем ручное время открытия
+     * текущим моментом, и TournamentSchedule сразу считает регистрацию открытой.
+     */
+    #[AdminRoute(path: '{entityId}/open-registration-now', name: 'openRegistrationNow')]
+    public function openRegistrationNow(
+        AdminContext $context,
+        EntityManagerInterface $em,
+        ClockInterface $clock,
+        AdminUrlGenerator $urlGenerator,
+    ): RedirectResponse {
+        $tournament = $context->getEntity()->getInstance();
+        if ($tournament instanceof Tournament) {
+            $tournament->setRegistrationOpensAt($clock->now());
+            if ($tournament->getStatus() === TournamentStatus::Draft) {
+                $tournament->setStatus(TournamentStatus::Registration);
+            }
+            $em->flush();
+            $this->addFlash('success', 'Запись открыта — прямо сейчас.');
+        }
+
+        return $this->redirect(
+            $urlGenerator->setController(self::class)->setAction(Action::INDEX)->generateUrl(),
+        );
+    }
+
     public function configureFields(string $pageName): iterable
     {
         yield IdField::new('id')->hideOnForm();
         yield TextField::new('name', 'Название');
         yield DateField::new('date', 'Дата (воскресенье)');
+        yield DateTimeField::new('registrationOpensAt', 'Запись открывается')
+            ->setHelp('Пусто — по умолчанию: четверг перед турниром, 16:00. Заполнить, чтобы открыть запись раньше или позже.');
         yield ChoiceField::new('status', 'Статус')
             ->setChoices(array_combine(
                 array_map(static fn (TournamentStatus $s) => $s->name, TournamentStatus::cases()),

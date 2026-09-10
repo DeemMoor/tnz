@@ -42,4 +42,35 @@ final class TournamentScheduleTest extends TestCase
         self::assertSame(2, $this->schedule()->number($this->tournamentOn('2026-03-22')));
         self::assertSame(3, $this->schedule()->number($this->tournamentOn('2026-03-29')));
     }
+
+    public function testRegistrationOpensThursdayAtFourByDefault(): void
+    {
+        $opens = $this->schedule()->registrationOpensAt($this->tournamentOn('2026-09-13'));
+
+        self::assertSame('2026-09-10 16:00', $opens->format('Y-m-d H:i'));
+    }
+
+    public function testManualTimeOverridesDefault(): void
+    {
+        $tournament = $this->tournamentOn('2026-09-13');
+        $tournament->setRegistrationOpensAt(new \DateTimeImmutable('2026-09-10 10:00'));
+
+        $opens = $this->schedule()->registrationOpensAt($tournament);
+
+        self::assertSame('2026-09-10 10:00', $opens->format('Y-m-d H:i'));
+    }
+
+    public function testRegistrationIsClosedBeforeDefaultTimeButOpenAfterManualOpening(): void
+    {
+        $tournament = $this->tournamentOn('2026-09-13');
+        $now = new \DateTimeImmutable('2026-09-10 15:10');
+
+        // По умолчанию в 15:10 четверга запись ещё закрыта — откроется в 16:00.
+        self::assertFalse($this->schedule()->isRegistrationOpen($tournament, $now));
+
+        // Админ нажал «Открыть запись сейчас» — время открытия стало текущим.
+        $tournament->setRegistrationOpensAt($now);
+
+        self::assertTrue($this->schedule()->isRegistrationOpen($tournament, $now));
+    }
 }

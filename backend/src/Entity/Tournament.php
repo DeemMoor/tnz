@@ -36,6 +36,14 @@ class Tournament
     #[ORM\Column(length: 20, enumType: TournamentStatus::class)]
     private TournamentStatus $status = TournamentStatus::Draft;
 
+    /**
+     * Ручное время открытия записи. Если задано — перекрывает расчёт «четверг 16:00»
+     * в TournamentSchedule. Нужно, когда запись объявили раньше срока
+     * (например, анонсом в канале) и её надо открыть досрочно.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $registrationOpensAt = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -87,6 +95,18 @@ class Tournament
     public function setStatus(TournamentStatus $status): static
     {
         $this->status = $status;
+
+        return $this;
+    }
+
+    public function getRegistrationOpensAt(): ?\DateTimeImmutable
+    {
+        return $this->registrationOpensAt;
+    }
+
+    public function setRegistrationOpensAt(?\DateTimeImmutable $registrationOpensAt): static
+    {
+        $this->registrationOpensAt = $registrationOpensAt;
 
         return $this;
     }

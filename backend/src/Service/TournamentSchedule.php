@@ -40,10 +40,13 @@ final class TournamentSchedule
 
     /**
      * Регистрация открывается в четверг 16:00 (за 3 дня до воскресенья).
+     * Если у турнира задано ручное время — оно главнее: так админ может
+     * открыть запись досрочно, не трогая дату самого турнира.
      */
     public function registrationOpensAt(Tournament $tournament): \DateTimeImmutable
     {
-        return $tournament->getDate()->modify('-3 days')->setTime(16, 0);
+        return $tournament->getRegistrationOpensAt()
+            ?? $tournament->getDate()->modify('-3 days')->setTime(16, 0);
     }
 
     public function checkinStartsAt(Tournament $tournament): \DateTimeImmutable
